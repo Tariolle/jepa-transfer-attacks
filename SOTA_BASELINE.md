@@ -112,6 +112,8 @@ python scripts/train_dsva_generator.py `
 
 Compare this directly against `results\dsva_retrained_eps16.pth`. Start with a light JEPA weight because the first CE+JEPA hybrid suggested the JEPA loss can conflict when over-weighted.
 
+The first `DINO+MAE+JEPA` run with `jepa_weight=0.25` dropped to `11.22%` mean transfer, so JEPA should not be added to dSVA by simple weighted-sum loss without further diagnostics.
+
 ```powershell
 python scripts/train_dsva_generator.py `
   --data-root .\imagenette2-320\train `

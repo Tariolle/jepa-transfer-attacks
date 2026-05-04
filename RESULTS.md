@@ -168,6 +168,18 @@ Our dSVA-style DINO+MAE generator trained for one epoch on 1000 Imagenette train
 
 Mean transfer success: **33.27%**
 
+## Retrained dSVA + I-JEPA Generator, Epsilon 16/255
+
+Same 1000-image dSVA-style DINO+MAE generator run with I-JEPA encoder token disruption added at `jepa_weight=0.25`.
+
+| model | clean acc | adv acc | attack success |
+| --- | ---: | ---: | ---: |
+| resnet50 | 98.00% | 73.00% | 25.51% |
+| convnext_tiny | 98.00% | 92.00% | 6.12% |
+| vit_b_16 | 99.00% | 97.00% | 2.02% |
+
+Mean transfer success: **11.22%**
+
 ## CE ResNet-50, Strong Engine, Epsilon 16/255
 
 Same strong CE baseline as above, but with `epsilon=16/255` and `step_size=4/255`.
@@ -235,6 +247,7 @@ Mean non-surrogate transfer success: **13.21%**
 - The first DINO key-facet proxy does not improve over final-token DINO; it should not be treated as a dSVA reproduction.
 - The released dSVA checkpoint is dramatically stronger at its paper budget of `16/255`; do not compare it directly to `8/255` runs.
 - The local dSVA-style retraining run reaches I-JEPA PGD territory but remains far below the released ImageNet-trained dSVA checkpoint.
+- Naively adding I-JEPA to the local DINO+MAE generator at weight `0.25` hurts transfer badly.
 - At `16/255`, I-JEPA encoder PGD beats CE ResNet-50 on mean transfer but remains far below the released dSVA generator.
 - The first I-JEPA generator is weaker than I-JEPA PGD, so generator architecture alone is not enough.
 - The strong-engine CE baseline is now the best result; the first CE + I-JEPA hybrid did not beat CE-only.
