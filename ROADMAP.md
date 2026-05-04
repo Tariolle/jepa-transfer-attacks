@@ -1,5 +1,16 @@
 # Roadmap
 
+## Current Framing
+
+The main branch is no longer "separate JEPA attack vs dSVA". Use dSVA as the SOTA-grade generator scaffold, then test which representation objectives belong inside it:
+
+- `DINO + MAE`: dSVA control
+- `JEPA + MAE`: tests whether JEPA can replace DINO's semantic role
+- `DINO + JEPA`: tests whether JEPA can complement or replace MAE
+- `DINO + MAE + JEPA`: tests whether JEPA is a third complementary signal
+
+dSVA is not a neutral benchmark: intermediate ViT facets, attention guidance, and DINO/MAE feature taps are partly tuned for DINO/MAE. A weak JEPA drop-in result would not prove JEPA is weak; it would only prove that this dSVA configuration does not favor it.
+
 ## Next Step
 
 Validate the normalized official dSVA + low-weight I-JEPA continuation signal on a larger eval set or repeated seeds. The current 1000-image check is positive but small: `84.69% -> 85.58%`.
@@ -21,3 +32,11 @@ Validate the normalized official dSVA + low-weight I-JEPA continuation signal on
 ## Decision Rule
 
 Scale JEPA if the official dSVA continuation gain survives larger validation, improves cross-family transfer, or adds complementary failures. Do not require the predictor-only objective to win by itself.
+
+## Day-One Read
+
+Promising: I-JEPA encoder features beat naive DINO features in early diagnostics, and normalized low-weight JEPA continuation slightly improved the released dSVA checkpoint on 1000 validation images.
+
+Not proven: JEPA replacing DINO, JEPA-only sufficiency, predictor-based attacks, and full dSVA reproduction fidelity.
+
+Not promising so far: heavy `DINO+MAE+JEPA` from-scratch weighting, JEPA-only generator training, and predictor-only objectives.
