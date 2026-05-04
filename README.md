@@ -74,4 +74,17 @@ python scripts/run_ijepa_predictive_attack.py `
   --device cuda
 ```
 
+Run the full Meta I-JEPA predictor objective:
+
+```powershell
+python scripts/run_ijepa_full_predictor_attack.py `
+  --data-root D:\path\to\imagenette2-320\val `
+  --ijepa-repo D:\path\to\ijepa `
+  --checkpoint D:\path\to\IN1K-vit.h.14-300e.pth.tar `
+  --limit 100 `
+  --target-block-size 7 `
+  --victims resnet50 convnext_tiny vit_b_16 `
+  --device cuda
+```
+
 The true predictor objective requires Meta's original full I-JEPA checkpoint, which includes a trained predictor and is about 10.36 GB for the ViT-H/14 ImageNet-1K checkpoint.

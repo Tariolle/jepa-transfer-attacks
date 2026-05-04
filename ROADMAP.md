@@ -2,7 +2,7 @@
 
 ## Next Step
 
-Implement the full I-JEPA predictor objective using Meta's original full checkpoint, then compare it directly against the completed naive I-JEPA feature-disruption diagnostic.
+Run the full I-JEPA predictor objective using Meta's original full checkpoint, then compare it directly against the completed naive I-JEPA feature-disruption diagnostic.
 
 - ~~Phase 1: supervised transfer baseline~~
 - ~~Phase 2a: naive DINOv2 feature-disruption diagnostic~~

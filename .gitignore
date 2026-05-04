@@ -2,6 +2,8 @@
 imagenette2-320/
 .torch_cache/
 .hf_cache/
+ijepa/
+*.pth.tar
 
 # Experiment outputs
 results/*
