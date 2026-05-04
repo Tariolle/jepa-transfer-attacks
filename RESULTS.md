@@ -82,6 +82,18 @@ This used the Hugging Face I-JEPA encoder with masked target tokens. It is not t
 
 Mean transfer success: **0.34%**
 
+## Phase 3c: Full I-JEPA Predictor Objective
+
+This used Meta's original full I-JEPA ViT-H/14 ImageNet-1K checkpoint with the trained predictor objective.
+
+| model | clean acc | adv acc | attack success |
+| --- | ---: | ---: | ---: |
+| resnet50 | 98.00% | 97.00% | 1.02% |
+| convnext_tiny | 98.00% | 96.00% | 2.04% |
+| vit_b_16 | 99.00% | 97.00% | 2.02% |
+
+Mean transfer success: **1.69%**
+
 ## Takeaways
 
 - White-box supervised PGD works as expected.
@@ -89,3 +101,4 @@ Mean transfer success: **0.34%**
 - Naive DINOv2 feature disruption is weaker than supervised PGD in these runs.
 - Naive I-JEPA feature disruption is the strongest diagnostic SSL result so far.
 - The masked-context I-JEPA proxy is too weak to stand in for the true trained predictor objective.
+- The full trained I-JEPA predictor objective transfers weakly in this first run and does not beat naive I-JEPA feature disruption.
