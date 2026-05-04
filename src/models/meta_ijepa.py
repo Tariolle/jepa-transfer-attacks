@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import gc
 from pathlib import Path
 from typing import Iterable
 
@@ -102,10 +103,19 @@ class MetaIJepaPredictor(nn.Module):
         )
         target_encoder = vit.__dict__[model_name](img_size=[image_size], patch_size=patch_size)
 
-        checkpoint_obj = torch.load(self.checkpoint, map_location="cpu")
+        print(f"Reading checkpoint file: {self.checkpoint}", flush=True)
+        try:
+            checkpoint_obj = torch.load(self.checkpoint, map_location="cpu", mmap=True)
+        except TypeError:
+            checkpoint_obj = torch.load(self.checkpoint, map_location="cpu")
+        print("Checkpoint file read; loading encoder weights.", flush=True)
         encoder.load_state_dict(_strip_module_prefix(checkpoint_obj["encoder"]))
+        print("Loading predictor weights.", flush=True)
         predictor.load_state_dict(_strip_module_prefix(checkpoint_obj["predictor"]))
+        print("Loading target encoder weights.", flush=True)
         target_encoder.load_state_dict(_strip_module_prefix(checkpoint_obj.get("target_encoder", checkpoint_obj["encoder"])))
+        del checkpoint_obj
+        gc.collect()
 
         self.encoder = encoder.to(device).eval()
         self.predictor = predictor.to(device).eval()
