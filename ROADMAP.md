@@ -2,7 +2,7 @@
 
 ## Next Step
 
-Build the SOTA-grade SSL baseline path from [SOTA_BASELINE.md](SOTA_BASELINE.md): dSVA tracking, intermediate DINO facets, MAE hidden states, and DINO+MAE joint disruption.
+Validate the normalized official dSVA + low-weight I-JEPA continuation signal on a larger eval set or repeated seeds. The current 1000-image check is positive but small: `84.69% -> 85.58%`.
 
 ## Phases
 
@@ -15,8 +15,9 @@ Build the SOTA-grade SSL baseline path from [SOTA_BASELINE.md](SOTA_BASELINE.md)
 - Phase 5: stronger transfer engine shared by all objectives: started with momentum, input diversity, and translation smoothing
 - Phase 6: JEPA hybrids, especially `JEPA encoder + CE`: first strong-engine run did not beat CE-only
 - Phase 7: JEPA generator trained with dSVA architecture: first 1000-image run is below JEPA PGD
-- Phase 8: larger randomized/balanced evaluation set
+- Phase 8: official dSVA + normalized I-JEPA continuation: initial 1000-image eval gives a small positive matched gain
+- Phase 9: larger randomized/balanced evaluation set
 
 ## Decision Rule
 
-Scale JEPA if it improves best transfer success, improves cross-family transfer, or adds complementary failures when combined with CE or DINO/MAE. Do not require the predictor-only objective to win by itself.
+Scale JEPA if the official dSVA continuation gain survives larger validation, improves cross-family transfer, or adds complementary failures. Do not require the predictor-only objective to win by itself.

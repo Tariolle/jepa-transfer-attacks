@@ -45,6 +45,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--enable-jepa", action="store_true", help="Add I-JEPA encoder feature disruption to the dSVA loss.")
     parser.add_argument("--jepa-model", default="facebook/ijepa_vith14_1k")
     parser.add_argument("--jepa-weight", type=float, default=0.25)
+    parser.add_argument(
+        "--normalize-loss-weights",
+        action="store_true",
+        help="Divide the weighted feature-disruption objective by the sum of active loss weights.",
+    )
     parser.add_argument("--disable-dino", action="store_true")
     parser.add_argument("--disable-mae", action="store_true")
     parser.add_argument("--feature-mode", choices=["cls", "patch_mean", "tokens"], default="tokens")
@@ -219,6 +224,18 @@ def main() -> None:
                 if jepa is not None and clean_jepa is not None:
                     jepa_disruption = disruption_loss(jepa(adv), clean_jepa, args.token_loss, args.distance)
                     total_disruption = total_disruption + args.jepa_weight * jepa_disruption
+
+                if args.normalize_loss_weights:
+                    active_weight_sum = 0.0
+                    if dino is not None:
+                        active_weight_sum += args.dino_weight
+                    if mae is not None:
+                        active_weight_sum += args.mae_weight
+                    if jepa is not None:
+                        active_weight_sum += args.jepa_weight
+                    if active_weight_sum <= 0:
+                        raise ValueError("Active loss weights must sum to a positive value")
+                    total_disruption = total_disruption / active_weight_sum
 
                 loss = -total_disruption / args.grad_accum_steps
 

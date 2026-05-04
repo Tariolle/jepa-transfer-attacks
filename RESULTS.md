@@ -192,6 +192,17 @@ Started from the 1000-image dSVA-style DINO+MAE checkpoint, then fine-tuned for 
 
 Mean transfer success: **45.49%**
 
+## Official dSVA + Normalized I-JEPA Fine-Tune, Epsilon 16/255
+
+Started from the released dSVA checkpoint, continued for one epoch on 1000 Imagenette train images, and evaluated on 1000 Imagenette val images. The control also gets the same extra training steps; loss weights are normalized so adding JEPA does not inflate total loss scale.
+
+| run | resnet50 | convnext_tiny | vit_b_16 | mean |
+| --- | ---: | ---: | ---: | ---: |
+| DINO+MAE control, `lr=5e-5` | 84.54% | 74.77% | 94.75% | 84.69% |
+| DINO+MAE+I-JEPA, `jepa_weight=0.05`, `lr=5e-5` | 85.47% | 76.75% | 94.53% | 85.58% |
+
+Matched gain: **+0.89 points**. Treat as a positive but small signal until full-set or repeated-seed validation.
+
 ## CE ResNet-50, Strong Engine, Epsilon 16/255
 
 Same strong CE baseline as above, but with `epsilon=16/255` and `step_size=4/255`.
@@ -261,6 +272,7 @@ Mean non-surrogate transfer success: **13.21%**
 - The local dSVA-style retraining run reaches I-JEPA PGD territory but remains far below the released ImageNet-trained dSVA checkpoint.
 - Naively adding I-JEPA to the local DINO+MAE generator at weight `0.25` hurts transfer badly.
 - Low-weight I-JEPA fine-tuning of a trained DINO+MAE generator improves the local dSVA-style generator from `33.27%` to `45.49%`.
+- On the released dSVA checkpoint, normalized low-weight I-JEPA continuation improves the 1000-image validation mean from `84.69%` to `85.58%`; this is promising but small enough to require larger validation.
 - At `16/255`, I-JEPA encoder PGD beats CE ResNet-50 on mean transfer but remains far below the released dSVA generator.
 - The first I-JEPA generator is weaker than I-JEPA PGD, so generator architecture alone is not enough.
 - The strong-engine CE baseline is now the best result; the first CE + I-JEPA hybrid did not beat CE-only.
