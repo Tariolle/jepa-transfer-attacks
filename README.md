@@ -20,6 +20,10 @@ Supervised attacks can overfit to one model's decision boundary. SSL feature att
 
 See [ROADMAP.md](ROADMAP.md).
 
+## Results
+
+See [RESULTS.md](RESULTS.md) for the current 100-image Imagenette baseline summaries.
+
 ## Metrics
 
 For each attack and victim model, report clean accuracy, adversarial accuracy, accuracy drop, attack success rate on originally correct samples, and mean transfer success across non-surrogate victims.
