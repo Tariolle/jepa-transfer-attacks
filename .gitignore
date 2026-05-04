@@ -1,0 +1,18 @@
+# Local datasets and model weights
+imagenette2-320/
+.torch_cache/
+
+# Experiment outputs
+results/*
+!results/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Environment and editor noise
+.venv/
+venv/
+.env
+.idea/
+.vscode/

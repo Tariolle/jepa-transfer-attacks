@@ -1,0 +1,12 @@
+data_root: null
+limit: 32
+batch_size: 8
+surrogate: resnet50
+victims:
+  - resnet50
+  - convnext_tiny
+  - vit_b_16
+epsilon: 0.03137254901960784
+step_size: 0.00784313725490196
+steps: 10
+seed: 0
