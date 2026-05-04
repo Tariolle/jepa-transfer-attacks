@@ -87,6 +87,9 @@ class HuggingFaceIJepaEncoder(nn.Module):
         pretrained: bool = True,
         image_size: int = 224,
         feature_mode: str = "patch_mean",
+        use_mask_token: bool = False,
+        cache_dir: str | None = None,
+        local_files_only: bool = False,
         mean: Iterable[float] = IMAGENET_MEAN,
         std: Iterable[float] = IMAGENET_STD,
     ):
@@ -102,7 +105,12 @@ class HuggingFaceIJepaEncoder(nn.Module):
             raise ImportError("Install transformers to use the I-JEPA encoder backend.") from exc
 
         if pretrained:
-            self.model = AutoModel.from_pretrained(model_name)
+            self.model = AutoModel.from_pretrained(
+                model_name,
+                use_mask_token=use_mask_token,
+                cache_dir=cache_dir,
+                local_files_only=local_files_only,
+            )
         else:
             config = IJepaConfig(
                 image_size=image_size,
@@ -112,7 +120,7 @@ class HuggingFaceIJepaEncoder(nn.Module):
                 num_attention_heads=3,
                 intermediate_size=768,
             )
-            self.model = IJepaModel(config)
+            self.model = IJepaModel(config, use_mask_token=use_mask_token)
 
         self.model.eval()
         for param in self.model.parameters():
@@ -126,11 +134,20 @@ class HuggingFaceIJepaEncoder(nn.Module):
         if self.feature_mode == "cls":
             return features[:, 0]
         if self.feature_mode == "patch_mean":
-            return features[:, 1:].mean(dim=1)
+            return features.mean(dim=1)
         if self.feature_mode == "tokens":
             return features
 
         raise ValueError(f"Unsupported I-JEPA feature mode: {self.feature_mode}")
+
+    def forward_tokens(self, images: torch.Tensor, bool_masked_pos: torch.Tensor | None = None) -> torch.Tensor:
+        images = (images - self.mean) / self.std
+        outputs = self.model(
+            pixel_values=images,
+            bool_masked_pos=bool_masked_pos,
+            interpolate_pos_encoding=True,
+        )
+        return outputs.last_hidden_state
 
 
 def load_hf_ijepa_encoder(
@@ -139,12 +156,18 @@ def load_hf_ijepa_encoder(
     pretrained: bool = True,
     image_size: int = 224,
     feature_mode: str = "patch_mean",
+    use_mask_token: bool = False,
+    cache_dir: str | None = None,
+    local_files_only: bool = False,
 ) -> HuggingFaceIJepaEncoder:
     encoder = HuggingFaceIJepaEncoder(
         model_name=model_name,
         pretrained=pretrained,
         image_size=image_size,
         feature_mode=feature_mode,
+        use_mask_token=use_mask_token,
+        cache_dir=cache_dir,
+        local_files_only=local_files_only,
     ).to(device)
     encoder.eval()
     return encoder

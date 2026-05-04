@@ -30,7 +30,7 @@ The project is promising if I-JEPA predictive inconsistency beats plain I-JEPA f
 
 ## Status
 
-Phase 1 established the supervised PGD transfer baseline. Phase 2a adds naive DINOv2 feature-disruption attacks as a diagnostic SSL baseline. Phase 3a adds naive I-JEPA feature disruption. The roadmap separates diagnostic feature disruption from stronger transfer baselines.
+Phase 1 established the supervised PGD transfer baseline. Phase 2a adds naive DINOv2 feature-disruption attacks as a diagnostic SSL baseline. Phase 3a adds naive I-JEPA feature disruption. Phase 3b-proxy tests masked-context inconsistency with the available Hugging Face I-JEPA encoder, but it is not the full trained Meta predictor objective.
 
 Run the current SSL baseline:
 
@@ -57,3 +57,17 @@ python scripts/run_ijepa_feature_attack.py `
   --victims resnet50 convnext_tiny vit_b_16 `
   --device cuda
 ```
+
+Run the masked-context I-JEPA proxy:
+
+```powershell
+python scripts/run_ijepa_predictive_attack.py `
+  --data-root D:\path\to\imagenette2-320\val `
+  --limit 100 `
+  --ijepa-model facebook/ijepa_vith14_1k `
+  --target-block-size 8 `
+  --victims resnet50 convnext_tiny vit_b_16 `
+  --device cuda
+```
+
+The true predictor objective requires Meta's original full I-JEPA checkpoint, which includes a trained predictor and is about 10.36 GB for the ViT-H/14 ImageNet-1K checkpoint.
