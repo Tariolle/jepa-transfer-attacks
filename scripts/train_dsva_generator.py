@@ -18,7 +18,7 @@ if str(REPO_ROOT) not in sys.path:
 from src.attacks.losses import feature_disruption_loss, token_feature_disruption_loss
 from src.data.imagenet_subset import ImageNetStyleFolder, default_transform, load_class_map
 from src.models.dsva import DSVAGenerator, project_generator_output
-from src.models.ssl_encoders import load_hf_vit_facet_encoder, load_timm_vit_block_feature_encoder
+from src.models.ssl_encoders import load_hf_ijepa_encoder, load_hf_vit_facet_encoder, load_timm_vit_block_feature_encoder
 from src.utils.seed import set_seed
 
 
@@ -42,6 +42,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--mae-block-index", type=int, default=10)
     parser.add_argument("--mae-facet", choices=["block", "q", "k", "v"], default="q")
     parser.add_argument("--mae-weight", type=float, default=0.5)
+    parser.add_argument("--enable-jepa", action="store_true", help="Add I-JEPA encoder feature disruption to the dSVA loss.")
+    parser.add_argument("--jepa-model", default="facebook/ijepa_vith14_1k")
+    parser.add_argument("--jepa-weight", type=float, default=0.25)
     parser.add_argument("--disable-dino", action="store_true")
     parser.add_argument("--disable-mae", action="store_true")
     parser.add_argument("--feature-mode", choices=["cls", "patch_mean", "tokens"], default="tokens")
@@ -118,6 +121,20 @@ def load_mae(args: argparse.Namespace, device: torch.device):
     )
 
 
+def load_jepa(args: argparse.Namespace, device: torch.device):
+    if not args.enable_jepa:
+        return None
+    return load_hf_ijepa_encoder(
+        model_name=args.jepa_model,
+        device=device,
+        pretrained=not args.no_pretrained,
+        image_size=args.image_size,
+        feature_mode=args.feature_mode,
+        cache_dir=args.hf_cache_dir,
+        local_files_only=args.local_files_only,
+    )
+
+
 def disruption_loss(
     adv_features: torch.Tensor,
     clean_features: torch.Tensor,
@@ -131,8 +148,8 @@ def disruption_loss(
 
 def main() -> None:
     args = parse_args()
-    if args.disable_dino and args.disable_mae:
-        raise ValueError("At least one of DINO or MAE must be enabled")
+    if args.disable_dino and args.disable_mae and not args.enable_jepa:
+        raise ValueError("At least one of DINO, MAE, or JEPA must be enabled")
 
     os.environ.setdefault("TORCH_HOME", args.torch_home)
     set_seed(args.seed)
@@ -141,10 +158,13 @@ def main() -> None:
     generator = load_generator(args, device)
     dino = load_dino(args, device)
     mae = load_mae(args, device)
+    jepa = load_jepa(args, device)
     if dino is not None:
         dino.eval()
     if mae is not None:
         mae.eval()
+    if jepa is not None:
+        jepa.eval()
 
     dataset = ImageNetStyleFolder(
         root=args.data_root,
@@ -181,12 +201,14 @@ def main() -> None:
             with torch.no_grad():
                 clean_dino = dino(images).detach() if dino is not None else None
                 clean_mae = mae(images).detach() if mae is not None else None
+                clean_jepa = jepa(images).detach() if jepa is not None else None
 
             with torch.amp.autocast("cuda", enabled=args.amp and device.type == "cuda"):
                 adv = project_generator_output(generator(images), images, args.epsilon, args.output_mode)
                 total_disruption = torch.zeros((), device=device)
                 dino_disruption = None
                 mae_disruption = None
+                jepa_disruption = None
 
                 if dino is not None and clean_dino is not None:
                     dino_disruption = disruption_loss(dino(adv), clean_dino, args.token_loss, args.distance)
@@ -194,6 +216,9 @@ def main() -> None:
                 if mae is not None and clean_mae is not None:
                     mae_disruption = disruption_loss(mae(adv), clean_mae, args.token_loss, args.distance)
                     total_disruption = total_disruption + args.mae_weight * mae_disruption
+                if jepa is not None and clean_jepa is not None:
+                    jepa_disruption = disruption_loss(jepa(adv), clean_jepa, args.token_loss, args.distance)
+                    total_disruption = total_disruption + args.jepa_weight * jepa_disruption
 
                 loss = -total_disruption / args.grad_accum_steps
 
@@ -210,6 +235,7 @@ def main() -> None:
                 "total_disruption": float(total_disruption.detach().item()),
                 "dino_disruption": float(dino_disruption.detach().item()) if dino_disruption is not None else 0.0,
                 "mae_disruption": float(mae_disruption.detach().item()) if mae_disruption is not None else 0.0,
+                "jepa_disruption": float(jepa_disruption.detach().item()) if jepa_disruption is not None else 0.0,
                 "max_delta": float((adv.detach() - images).abs().max().item()),
             }
             rows.append(row)

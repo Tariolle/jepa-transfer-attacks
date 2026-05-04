@@ -108,6 +108,45 @@ python scripts/train_dsva_generator.py `
   --output-checkpoint results\dsva_dino_only_retrained_eps16.pth
 ```
 
+## dSVA + JEPA Command
+
+Compare this directly against `results\dsva_retrained_eps16.pth`. Start with a light JEPA weight because the first CE+JEPA hybrid suggested the JEPA loss can conflict when over-weighted.
+
+```powershell
+python scripts/train_dsva_generator.py `
+  --data-root .\imagenette2-320\train `
+  --limit 1000 `
+  --batch-size 1 `
+  --grad-accum-steps 8 `
+  --epochs 1 `
+  --token-loss `
+  --amp `
+  --enable-jepa `
+  --jepa-weight 0.25 `
+  --epsilon 0.06274509803921569 `
+  --device cuda `
+  --output-checkpoint results\dsva_jepa_retrained_eps16.pth
+```
+
+On an 8 GB GPU, `DINO+MAE+JEPA` may be too large. If it OOMs, first test `DINO+JEPA`:
+
+```powershell
+python scripts/train_dsva_generator.py `
+  --data-root .\imagenette2-320\train `
+  --limit 1000 `
+  --batch-size 1 `
+  --grad-accum-steps 8 `
+  --epochs 1 `
+  --disable-mae `
+  --token-loss `
+  --amp `
+  --enable-jepa `
+  --jepa-weight 0.25 `
+  --epsilon 0.06274509803921569 `
+  --device cuda `
+  --output-checkpoint results\dsva_dino_jepa_retrained_eps16.pth
+```
+
 ## JEPA Generator Command
 
 This trains the same ResNet generator architecture with an I-JEPA encoder-disruption loss. Start with a small `--limit` smoke run, then scale to a larger training split.
