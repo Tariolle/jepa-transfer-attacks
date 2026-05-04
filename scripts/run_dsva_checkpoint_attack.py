@@ -14,36 +14,47 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.attacks.cli import add_transfer_attack_args
-from src.attacks.losses import cross_entropy_loss
-from src.attacks.pgd import attack_pgd
 from src.data.imagenet_subset import ImageNetStyleFolder, default_transform, load_class_map
 from src.eval.metrics import TransferMeter, format_table
 from src.models.classifiers import load_classifiers
+from src.models.dsva import load_dsva_generator, project_generator_output
 from src.utils.seed import set_seed
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Phase 1: supervised CE PGD transfer baseline.")
+    parser = argparse.ArgumentParser(description="Evaluate the released dSVA generator checkpoint directly.")
     parser.add_argument("--data-root", required=True, help="Root folder containing class subfolders.")
+    parser.add_argument("--checkpoint", default="external/models/dSVA/model.pth")
     parser.add_argument("--class-map", default=None, help="Optional JSON mapping folder names to ImageNet class ids.")
     parser.add_argument("--allow-folder-labels", action="store_true", help="Use local folder ids if no ImageNet id is known.")
     parser.add_argument("--limit", type=int, default=100, help="Maximum number of images to evaluate.")
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--num-workers", type=int, default=0)
-    parser.add_argument("--surrogate", default="resnet50")
     parser.add_argument("--victims", nargs="+", default=["resnet50", "convnext_tiny", "vit_b_16"])
-    parser.add_argument("--epsilon", type=float, default=8 / 255)
-    parser.add_argument("--step-size", type=float, default=2 / 255)
-    parser.add_argument("--steps", type=int, default=10)
-    parser.add_argument("--no-random-start", action="store_true")
-    add_transfer_attack_args(parser)
+    parser.add_argument("--image-size", type=int, default=224)
+    parser.add_argument("--epsilon", type=float, default=16 / 255)
+    parser.add_argument(
+        "--output-mode",
+        choices=["adv", "delta", "scaled-delta"],
+        default="adv",
+        help="Interpret generator output as adv image, raw delta, or epsilon-scaled tanh delta.",
+    )
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
-    parser.add_argument("--no-pretrained", action="store_true", help="Use randomly initialized models for smoke tests only.")
-    parser.add_argument("--torch-home", default=str(REPO_ROOT / ".torch_cache"), help="Cache directory for model weights.")
-    parser.add_argument("--output-csv", default="results/phase1_supervised_baseline.csv")
+    parser.add_argument("--no-pretrained", action="store_true", help="Use randomly initialized victims for smoke tests only.")
+    parser.add_argument("--torch-home", default=str(REPO_ROOT / ".torch_cache"), help="Cache directory for torch model weights.")
+    parser.add_argument("--output-csv", default="results/dsva_checkpoint.csv")
     return parser.parse_args()
+
+
+def make_adversarial(
+    generator: torch.nn.Module,
+    images: torch.Tensor,
+    epsilon: float,
+    output_mode: str,
+) -> torch.Tensor:
+    generated = generator(images)
+    return project_generator_output(generated, images, epsilon, output_mode)
 
 
 def main() -> None:
@@ -52,13 +63,12 @@ def main() -> None:
     set_seed(args.seed)
     device = torch.device(args.device)
 
-    model_names = list(dict.fromkeys([args.surrogate, *args.victims]))
-    classifiers = load_classifiers(model_names, device=device, pretrained=not args.no_pretrained)
-    surrogate = classifiers[args.surrogate]
+    generator = load_dsva_generator(args.checkpoint, device=device)
+    classifiers = load_classifiers(args.victims, device=device, pretrained=not args.no_pretrained)
 
     dataset = ImageNetStyleFolder(
         root=args.data_root,
-        transform=default_transform(),
+        transform=default_transform(image_size=args.image_size),
         limit=args.limit,
         class_map=load_class_map(args.class_map),
         allow_folder_labels=args.allow_folder_labels,
@@ -71,41 +81,24 @@ def main() -> None:
         pin_memory=device.type == "cuda",
     )
 
-    meters = {name: TransferMeter() for name in model_names}
+    meters = {name: TransferMeter() for name in args.victims}
+    max_delta = 0.0
 
-    for images, labels, _paths in tqdm(loader, desc="PGD transfer"):
+    for images, labels, _paths in tqdm(loader, desc="dSVA checkpoint transfer"):
         images = images.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
-
-        def loss_fn(images_adv: torch.Tensor) -> torch.Tensor:
-            return cross_entropy_loss(surrogate, images_adv, labels)
-
-        adv = attack_pgd(
-            images,
-            loss_fn,
-            epsilon=args.epsilon,
-            step_size=args.step_size,
-            steps=args.steps,
-            random_start=not args.no_random_start,
-            momentum=args.momentum,
-            input_diversity_prob=args.input_diversity_prob,
-            input_diversity_min_resize=args.input_diversity_min_resize,
-            translation_kernel_size=args.translation_kernel_size,
-        )
+        adv = make_adversarial(generator, images, args.epsilon, args.output_mode)
+        max_delta = max(max_delta, float((adv - images).abs().max().item()))
 
         with torch.no_grad():
             for name, model in classifiers.items():
-                clean_logits = model(images)
-                adv_logits = model(adv)
-                meters[name].update(clean_logits, adv_logits, labels)
+                meters[name].update(model(images), model(adv), labels)
 
-    rows = [meters[name].as_row(name) for name in model_names]
+    rows = [meters[name].as_row(name) for name in args.victims]
     print(format_table(rows))
-
-    non_surrogate = [row["attack_success_rate"] for row in rows if row["model"] != args.surrogate]
-    if non_surrogate:
-        mean_transfer = sum(non_surrogate) / len(non_surrogate)
-        print(f"\nMean non-surrogate transfer success: {100 * mean_transfer:.2f}%")
+    mean_transfer = sum(row["attack_success_rate"] for row in rows) / len(rows)
+    print(f"\nMean transfer success: {100 * mean_transfer:.2f}%")
+    print(f"Max L_inf delta: {max_delta:.6f}")
 
     output_csv = Path(args.output_csv)
     output_csv.parent.mkdir(parents=True, exist_ok=True)

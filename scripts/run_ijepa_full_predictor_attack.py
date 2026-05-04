@@ -14,6 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from src.attacks.cli import add_transfer_attack_args
 from src.attacks.pgd import attack_pgd
 from src.data.imagenet_subset import ImageNetStyleFolder, default_transform, load_class_map
 from src.eval.metrics import TransferMeter, format_table
@@ -46,6 +47,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--step-size", type=float, default=2 / 255)
     parser.add_argument("--steps", type=int, default=10)
     parser.add_argument("--no-random-start", action="store_true")
+    add_transfer_attack_args(parser)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--no-pretrained", action="store_true", help="Use randomly initialized victims for smoke tests only.")
@@ -146,6 +148,10 @@ def main() -> None:
             step_size=args.step_size,
             steps=args.steps,
             random_start=not args.no_random_start,
+            momentum=args.momentum,
+            input_diversity_prob=args.input_diversity_prob,
+            input_diversity_min_resize=args.input_diversity_min_resize,
+            translation_kernel_size=args.translation_kernel_size,
         )
 
         with torch.no_grad():

@@ -4,6 +4,7 @@ imagenette2-320/
 .hf_cache/
 ijepa/
 *.pth.tar
+external/
 
 # Experiment outputs
 results/*

@@ -1,42 +1,48 @@
 # JEPA Transfer Attacks
 
-Research prototype for testing whether JEPA-style predictive latent inconsistency produces adversarial perturbations that transfer better across architectures than standard supervised or SSL feature attacks.
+Research prototype for testing whether JEPA-trained representations can improve black-box adversarial transfer across CNN and ViT classifiers.
 
-## Research Question
+The project is not predictor-only. We test JEPA as an attack family:
 
-Do perturbations that break latent context-to-target prediction transfer better to black-box CNN/ViT classifiers than perturbations that attack:
+- `JEPA-Encoder`: disrupt I-JEPA encoder features.
+- `JEPA-Predictor`: break context-to-target prediction.
+- `JEPA-Hybrid`: combine encoder, predictor, SSL, or supervised losses.
 
-- a supervised classifier boundary;
-- ordinary SSL features from models such as DINO/DINOv2 or MAE;
-- I-JEPA features without using the predictive objective?
+The practical goal is SOTA transferability. Ablations decide whether the useful signal comes from the encoder, the predictor, or their combination.
 
-The key comparison is not JEPA versus supervised attacks alone. JEPA must beat or complement strong SSL feature-disruption baselines.
+## Fair Comparison
 
-## Hypothesis
+Separate the attack objective from the attack engine.
 
-Supervised attacks can overfit to one model's decision boundary. SSL feature attacks may transfer better because they disrupt reusable visual representations. I-JEPA is interesting only if its predictive context-to-target structure adds transferability beyond plain feature disruption.
+| Layer | Examples |
+| --- | --- |
+| Objective | CE, DINO/MAE features, JEPA encoder, JEPA predictor, hybrids |
+| Engine | PGD, momentum, input diversity, translation/scale tricks, ensembles, generators |
 
-## Roadmap
+JEPA should be compared against DINO/MAE and supervised baselines under the same budget and attack engine. A vanilla JEPA run should not be judged against heavily optimized baselines.
 
-See [ROADMAP.md](ROADMAP.md).
+## Current Status
 
-## Results
+- Phase 1: supervised PGD transfer baseline done.
+- Phase 2a: naive DINOv2 feature disruption done.
+- Phase 3a: naive I-JEPA encoder feature disruption done.
+- Phase 3b/3c: predictor-style diagnostics done.
 
-See [RESULTS.md](RESULTS.md) for the current 100-image Imagenette baseline summaries.
+Current signal: the naive I-JEPA encoder attack beat the naive DINOv2 feature baselines on the 100-image Imagenette diagnostic. The full predictor objective was weak in its first vanilla setup. That means the encoder path is currently the strongest JEPA direction, not that JEPA should be dropped.
 
-## Metrics
+See [RESULTS.md](RESULTS.md) and [ROADMAP.md](ROADMAP.md).
 
-For each attack and victim model, report clean accuracy, adversarial accuracy, accuracy drop, attack success rate on originally correct samples, and mean transfer success across non-surrogate victims.
+See [SOTA_BASELINE.md](SOTA_BASELINE.md) for the external baseline target. The current DINOv2 token attack is a diagnostic, not a SOTA-grade dSVA reproduction.
 
-## Go / No-Go
+## Run Examples
 
-The project is promising if I-JEPA predictive inconsistency beats plain I-JEPA feature disruption, beats or complements DINO/MAE, or improves CNN-to-ViT transfer. It is weak if DINO/MAE dominate, predictive JEPA behaves like plain feature disruption, or the perturbations do not affect downstream classifier decisions.
+Add the same transfer-engine flags to any attack script when comparing stronger runs:
 
-## Status
+```powershell
+--momentum 1.0 --input-diversity-prob 0.7 --translation-kernel-size 5
+```
 
-Phase 1 established the supervised PGD transfer baseline. Phase 2a adds naive DINOv2 feature-disruption attacks as a diagnostic SSL baseline. Phase 3a adds naive I-JEPA feature disruption. Phase 3b-proxy tests masked-context inconsistency with the available Hugging Face I-JEPA encoder, but it is not the full trained Meta predictor objective.
-
-Run the current SSL baseline:
+Naive DINO/SSL feature baseline:
 
 ```powershell
 python scripts/run_ssl_feature_attack.py `
@@ -49,32 +55,19 @@ python scripts/run_ssl_feature_attack.py `
   --device cuda
 ```
 
-Run the current I-JEPA diagnostic:
+Naive I-JEPA encoder attack:
 
 ```powershell
 python scripts/run_ijepa_feature_attack.py `
   --data-root D:\path\to\imagenette2-320\val `
   --limit 100 `
-  --ssl-model facebook/ijepa_vith14_1k `
   --feature-mode tokens `
   --token-loss `
   --victims resnet50 convnext_tiny vit_b_16 `
   --device cuda
 ```
 
-Run the masked-context I-JEPA proxy:
-
-```powershell
-python scripts/run_ijepa_predictive_attack.py `
-  --data-root D:\path\to\imagenette2-320\val `
-  --limit 100 `
-  --ijepa-model facebook/ijepa_vith14_1k `
-  --target-block-size 8 `
-  --victims resnet50 convnext_tiny vit_b_16 `
-  --device cuda
-```
-
-Run the full Meta I-JEPA predictor objective:
+Full Meta I-JEPA predictor attack:
 
 ```powershell
 python scripts/run_ijepa_full_predictor_attack.py `
@@ -87,4 +80,14 @@ python scripts/run_ijepa_full_predictor_attack.py `
   --device cuda
 ```
 
-The true predictor objective requires Meta's original full I-JEPA checkpoint, which includes a trained predictor and is about 10.36 GB for the ViT-H/14 ImageNet-1K checkpoint.
+Hybrid CE + I-JEPA encoder attack:
+
+```powershell
+python scripts/run_hybrid_ce_ijepa_attack.py `
+  --data-root D:\path\to\imagenette2-320\val `
+  --limit 100 `
+  --surrogate resnet50 `
+  --token-loss `
+  --victims resnet50 convnext_tiny vit_b_16 `
+  --device cuda
+```
