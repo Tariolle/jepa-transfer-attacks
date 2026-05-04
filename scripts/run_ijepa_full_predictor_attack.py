@@ -92,6 +92,8 @@ def main() -> None:
     set_seed(args.seed)
     device = torch.device(args.device)
 
+    print(f"Using device: {device}", flush=True)
+    print(f"Loading full I-JEPA checkpoint from {args.checkpoint}", flush=True)
     ijepa = load_meta_ijepa_predictor(
         ijepa_repo=args.ijepa_repo,
         checkpoint=args.checkpoint,
@@ -102,8 +104,12 @@ def main() -> None:
         pred_depth=args.pred_depth,
         pred_emb_dim=args.pred_emb_dim,
     )
+    print("Loaded full I-JEPA encoder, predictor, and target encoder.", flush=True)
+    print(f"Loading victim classifiers: {', '.join(args.victims)}", flush=True)
     classifiers = load_classifiers(args.victims, device=device, pretrained=not args.no_pretrained)
+    print("Loaded victim classifiers.", flush=True)
 
+    print(f"Loading dataset from {args.data_root}", flush=True)
     dataset = ImageNetStyleFolder(
         root=args.data_root,
         transform=default_transform(image_size=args.image_size),
@@ -111,6 +117,7 @@ def main() -> None:
         class_map=load_class_map(args.class_map),
         allow_folder_labels=args.allow_folder_labels,
     )
+    print(f"Loaded {len(dataset)} images.", flush=True)
     loader = DataLoader(
         dataset,
         batch_size=args.batch_size,
