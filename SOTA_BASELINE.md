@@ -114,6 +114,8 @@ Compare this directly against `results\dsva_retrained_eps16.pth`. Start with a l
 
 The first `DINO+MAE+JEPA` run with `jepa_weight=0.25` dropped to `11.22%` mean transfer, so JEPA should not be added to dSVA by simple weighted-sum loss without further diagnostics.
 
+Fine-tuning the trained DINO+MAE generator with a small JEPA weight worked better: `jepa_weight=0.05`, `lr=2e-5` improved the local generator from `33.27%` to `45.49%`.
+
 ```powershell
 python scripts/train_dsva_generator.py `
   --data-root .\imagenette2-320\train `
