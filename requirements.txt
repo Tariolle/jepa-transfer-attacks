@@ -2,3 +2,5 @@ torch
 torchvision
 timm
 tqdm
+huggingface_hub
+transformers

@@ -1,6 +1,7 @@
 # Local datasets and model weights
 imagenette2-320/
 .torch_cache/
+.hf_cache/
 
 # Experiment outputs
 results/*

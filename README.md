@@ -28,20 +28,32 @@ For each attack and victim model, report clean accuracy, adversarial accuracy, a
 
 The project is promising if I-JEPA predictive inconsistency beats plain I-JEPA feature disruption, beats or complements DINO/MAE, or improves CNN-to-ViT transfer. It is weak if DINO/MAE dominate, predictive JEPA behaves like plain feature disruption, or the perturbations do not affect downstream classifier decisions.
 
-## Phase 1
+## Status
 
-Run the supervised baseline on a labeled ImageNet-style folder:
+Phase 1 established the supervised PGD transfer baseline. Phase 2a adds naive DINOv2 feature-disruption attacks as a diagnostic SSL baseline. Phase 3a adds naive I-JEPA feature disruption. The roadmap separates diagnostic feature disruption from stronger transfer baselines.
+
+Run the current SSL baseline:
 
 ```powershell
-python scripts/run_supervised_baseline.py `
-  --data-root D:\path\to\imagenet_like_subset `
+python scripts/run_ssl_feature_attack.py `
+  --data-root D:\path\to\imagenette2-320\val `
   --limit 100 `
-  --surrogate resnet50 `
+  --ssl-model vit_base_patch14_dinov2 `
+  --feature-mode tokens `
+  --token-loss `
   --victims resnet50 convnext_tiny vit_b_16 `
   --device cuda
 ```
 
-Images should be stored in class folders. Folder names can be ImageNet class ids such as `207`, ImageNette WordNet ids such as `n02102040`, or labels supplied through `--class-map`.
+Run the current I-JEPA diagnostic:
 
-The attack uses an `L_inf` budget of `8/255`, step size `2/255`, and 10 PGD steps by default.
-Pretrained weights are cached under `.torch_cache/` by default.
+```powershell
+python scripts/run_ijepa_feature_attack.py `
+  --data-root D:\path\to\imagenette2-320\val `
+  --limit 100 `
+  --ssl-model facebook/ijepa_vith14_1k `
+  --feature-mode tokens `
+  --token-loss `
+  --victims resnet50 convnext_tiny vit_b_16 `
+  --device cuda
+```
