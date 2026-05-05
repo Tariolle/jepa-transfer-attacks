@@ -34,6 +34,8 @@ See [RESULTS.md](RESULTS.md) and [ROADMAP.md](ROADMAP.md).
 
 See [SOTA_BASELINE.md](SOTA_BASELINE.md) for the external baseline target. The current DINOv2 token attack is a diagnostic, not a SOTA-grade dSVA reproduction.
 
+Colab entry point for the next validation step: [notebooks/phase9_dsva_jepa_validation_colab.ipynb](notebooks/phase9_dsva_jepa_validation_colab.ipynb).
+
 ## Run Examples
 
 Add the same transfer-engine flags to any attack script when comparing stronger runs:
