@@ -101,6 +101,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Do not run matched DINO+MAE continuation controls without JEPA.",
     )
+    parser.add_argument("--disable-dino", action="store_true", help="Pass --disable-dino to training.")
+    parser.add_argument("--disable-mae", action="store_true", help="Pass --disable-mae to training.")
+    parser.add_argument(
+        "--extra-train-args",
+        nargs="+",
+        default=[],
+        help="Extra arguments forwarded to the training script.",
+    )
     parser.add_argument("--skip-existing", action="store_true", help="Reuse existing checkpoints/eval CSVs when present.")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without running them.")
     return parser.parse_args()
@@ -118,6 +126,20 @@ def main() -> None:
             experiments.append(("control", 0.0, lr, False))
     for jepa_weight, lr in args.configs:
         experiments.append(("jepa", jepa_weight, lr, True))
+
+    def objective_label(enable_jepa: bool) -> str:
+        dino = not args.disable_dino
+        mae = not args.disable_mae
+        parts = []
+        if dino:
+            parts.append("dino")
+        if mae:
+            parts.append("mae")
+        if enable_jepa:
+            parts.append("jepa")
+        if not parts:
+            return "none"
+        return "_".join(parts)
 
     summary_rows = []
     for run_type, jepa_weight, lr, enable_jepa in experiments:
@@ -166,12 +188,18 @@ def main() -> None:
             train_cmd.extend(["--enable-jepa", "--jepa-weight", str(jepa_weight)])
         if args.normalize_loss_weights:
             train_cmd.append("--normalize-loss-weights")
+        if args.disable_dino:
+            train_cmd.append("--disable-dino")
+        if args.disable_mae:
+            train_cmd.append("--disable-mae")
         if not args.no_amp:
             train_cmd.append("--amp")
         if args.hf_cache_dir:
             train_cmd.extend(["--hf-cache-dir", args.hf_cache_dir])
         if args.local_files_only:
             train_cmd.append("--local-files-only")
+        if args.extra_train_args:
+            train_cmd.extend(args.extra_train_args)
 
         eval_cmd = [
             sys.executable,
@@ -213,6 +241,7 @@ def main() -> None:
         mean_transfer = "" if args.dry_run else f"{read_mean_transfer(eval_csv):.6f}"
         summary_rows.append(
             {
+                "objectives": objective_label(enable_jepa),
                 "run_type": run_type,
                 "jepa_weight": jepa_weight,
                 "lr": lr,
