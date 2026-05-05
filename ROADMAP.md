@@ -13,7 +13,7 @@ dSVA is not a neutral benchmark: intermediate ViT facets, attention guidance, an
 
 ## Next Step
 
-Analyze the Phase 9 per-victim results and run the next ablation that explains the small but consistent official dSVA + I-JEPA gain. Priorities: identify which victim architectures improved, test whether JEPA complements DINO or MAE specifically, and decide whether to scale the continuation or redesign the loss.
+Analyze Phase 9 per-victim CSVs, then ablate `DINO+JEPA`, `MAE+JEPA`, and `JEPA-only` continuations to explain the small consistent gain.
 
 ## Phases
 

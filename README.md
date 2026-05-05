@@ -23,18 +23,17 @@ JEPA should be compared against DINO/MAE and supervised baselines under the same
 
 ## Current Status
 
-- Phase 1: supervised PGD transfer baseline done.
-- Phase 2a: naive DINOv2 feature disruption done.
-- Phase 3a: naive I-JEPA encoder feature disruption done.
-- Phase 3b/3c: predictor-style diagnostics done.
+- Naive I-JEPA encoder disruption beat naive DINOv2 feature disruption in early diagnostics.
+- Predictor-style JEPA objectives were weak in first vanilla setups.
+- The current best signal is low-weight I-JEPA added to an official dSVA continuation.
 
-Current signal: the naive I-JEPA encoder attack beat the naive DINOv2 feature baselines on the 100-image Imagenette diagnostic. The full predictor objective was weak in its first vanilla setup. That means the encoder path is currently the strongest JEPA direction, not that JEPA should be dropped.
+Headline result: matched full-val repeated-seed dSVA continuation improved from **67.73%** to **68.39%** mean transfer. The gain is small but positive for all three seeds, and it is compared against the same extra training budget without JEPA.
 
 See [RESULTS.md](RESULTS.md) and [ROADMAP.md](ROADMAP.md).
 
 See [SOTA_BASELINE.md](SOTA_BASELINE.md) for the external baseline target. The current DINOv2 token attack is a diagnostic, not a SOTA-grade dSVA reproduction.
 
-Colab entry point for the next validation step: [notebooks/phase9_dsva_jepa_validation_colab.ipynb](notebooks/phase9_dsva_jepa_validation_colab.ipynb).
+Colab entry point for Phase 9 validation: [notebooks/phase9_dsva_jepa_validation_colab.ipynb](notebooks/phase9_dsva_jepa_validation_colab.ipynb).
 
 ## Run Examples
 

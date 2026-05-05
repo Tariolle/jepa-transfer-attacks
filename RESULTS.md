@@ -279,19 +279,10 @@ Mean non-surrogate transfer success: **13.21%**
 
 ## Takeaways
 
-- The best JEPA result so far is encoder feature disruption, not predictor inconsistency.
-- I-JEPA encoder disruption beats the matched DINOv2 base token baseline in both vanilla and strong-engine diagnostics.
-- The first DINO key-facet proxy does not improve over final-token DINO; it should not be treated as a dSVA reproduction.
-- The released dSVA checkpoint is dramatically stronger at its paper budget of `16/255`; do not compare it directly to `8/255` runs.
-- The local dSVA-style retraining run reaches I-JEPA PGD territory but remains far below the released ImageNet-trained dSVA checkpoint.
-- Naively adding I-JEPA to the local DINO+MAE generator at weight `0.25` hurts transfer badly.
-- Low-weight I-JEPA fine-tuning of a trained DINO+MAE generator improves the local dSVA-style generator from `33.27%` to `45.49%`.
-- On the released dSVA checkpoint, normalized low-weight I-JEPA continuation improves the repeated-seed full-val mean from `67.73%` to `68.39%`; the gain is positive for all three seeds but small.
-- The earlier 1000-image official dSVA continuation result (`84.69% -> 85.58%`) was directionally consistent but too optimistic in absolute score.
-- At `16/255`, I-JEPA encoder PGD beats CE ResNet-50 on mean transfer but remains far below the released dSVA generator.
-- The first I-JEPA generator is weaker than I-JEPA PGD, so generator architecture alone is not enough.
-- The strong-engine CE baseline is now the best result; the first CE + I-JEPA hybrid did not beat CE-only.
-- I-JEPA encoder disruption does improve with the stronger engine, but still trails CE-only here.
-- ResNet-50 CE remains the best strong-engine supervised surrogate on the current mean-transfer metric.
-- The full predictor objective was weak in its first vanilla setup, so it should be treated as an ablation, not the whole project.
-- Next comparisons must give CE, DINO/MAE, JEPA encoder, JEPA predictor, and hybrids the same stronger attack engine before making scale-up decisions.
+- The best JEPA signal so far is the I-JEPA encoder, not predictor inconsistency.
+- Naive I-JEPA encoder disruption beat naive DINOv2 feature disruption, but generator-scale dSVA is the real comparison point.
+- Heavy `DINO+MAE+JEPA` from scratch hurt transfer; low-weight normalized continuation is the promising path.
+- Official dSVA + normalized I-JEPA continuation improves repeated-seed full-val mean transfer from `67.73%` to `68.39%`.
+- The gain is positive for all three seeds and compared against a matched extra-training control, but it is small.
+- The earlier 1000-image official dSVA continuation result (`84.69% -> 85.58%`) was directionally consistent but optimistic in absolute score.
+- Next: inspect per-victim gains and ablate whether JEPA complements DINO, MAE, or only their combination.
