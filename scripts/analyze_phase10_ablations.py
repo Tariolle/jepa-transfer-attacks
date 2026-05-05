@@ -28,6 +28,21 @@ def read_summary_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def resolve_path(path_str: str, fallback_dir: Path) -> Path:
+    path = Path(path_str)
+    if path.exists():
+        return path
+    rel = path
+    while rel.parts and rel.parts[0] in ('', 'content', 'jepa-transfer-attacks'):
+        rel = Path(*rel.parts[1:])
+    if rel.exists():
+        return rel
+    local = fallback_dir / path.name
+    if local.exists():
+        return local
+    return path
+
+
 def read_eval_csv(path: Path) -> dict[str, float]:
     with path.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
@@ -56,7 +71,7 @@ def main() -> None:
             for row in rows:
                 # Skip controls from ablation sweeps unless they are useful references.
                 # We keep all rows; the user can filter later.
-                eval_path = Path(row["eval_csv"])
+                eval_path = resolve_path(row["eval_csv"], summary_path.parent)
                 if not eval_path.exists():
                     continue
                 eval_data = read_eval_csv(eval_path)

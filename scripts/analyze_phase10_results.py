@@ -37,6 +37,23 @@ def find_summaries(root: Path) -> list[Path]:
     return paths
 
 
+def resolve_path(path_str: str, fallback_dir: Path) -> Path:
+    path = Path(path_str)
+    if path.exists():
+        return path
+    # Try relative to repo root (strip Colab /content/jepa-transfer-attacks/ prefix)
+    rel = path
+    while rel.parts and rel.parts[0] in ('', 'content', 'jepa-transfer-attacks'):
+        rel = Path(*rel.parts[1:])
+    if rel.exists():
+        return rel
+    # Try same directory as summary
+    local = fallback_dir / path.name
+    if local.exists():
+        return local
+    return path
+
+
 def read_eval_csv(path: Path) -> dict[str, dict[str, str]]:
     """Return {model: row_dict} from an eval CSV."""
     with path.open(newline="", encoding="utf-8") as handle:
@@ -92,8 +109,8 @@ def main() -> None:
             print(f"Skipping {summary_path}: missing matched control or JEPA row for lr=5e-5", file=sys.stderr)
             continue
 
-        control_eval = read_eval_csv(Path(control["eval_csv"]))
-        jepa_eval = read_eval_csv(Path(jepa["eval_csv"]))
+        control_eval = read_eval_csv(resolve_path(control["eval_csv"], summary_path.parent))
+        jepa_eval = read_eval_csv(resolve_path(jepa["eval_csv"], summary_path.parent))
 
         for victim in control_eval:
             if victim not in jepa_eval:

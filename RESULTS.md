@@ -217,6 +217,48 @@ Across seeds: control **67.73% +/- 1.08**, I-JEPA **68.39% +/- 1.38**, matched g
 
 This confirms a small positive I-JEPA continuation signal against a proper extra-training control. The absolute full-val score is lower than the earlier 1000-image validation result, so the earlier `84.69% -> 85.58%` read should be treated as an optimistic subset estimate rather than the headline result.
 
+## Phase 10: Objective Ablations and Per-Victim Analysis
+
+Artifacts: `results/phase9_dsva_official_jepa_validation/` and `results/phase10_objective_ablations/` from the updated Colab notebook.
+
+### Per-Victim Phase 9 Gains
+
+Matched control vs DINO+MAE+I-JEPA (`jepa_weight=0.05`, `lr=5e-5`, 3 seeds, full-val `eval_limit=5000`):
+
+| victim | control mean | JEPA mean | matched gain | gain std |
+| --- | ---: | ---: | ---: | ---: |
+| resnet50 | 70.93% | 72.41% | **+1.49%** | 0.11% |
+| convnext_tiny | 54.00% | 55.29% | **+1.29%** | 0.35% |
+| vit_b_16 | 78.25% | 77.52% | **-0.72%** | 0.41% |
+
+The aggregate gain (+0.69 points) is driven by ResNet-50 and ConvNeXt-Tiny. ViT-B/16 drops slightly across all three seeds.
+
+### Objective Ablation Table
+
+Across-seed mean transfer success for each continuation objective:
+
+| objectives | mean transfer | resnet50 | convnext_tiny | vit_b_16 |
+| --- | ---: | ---: | ---: | ---: |
+| DINO-only | 66.78% | 69.82% | 52.07% | 78.46% |
+| DINO+JEPA | 67.91% | 71.84% | 53.42% | 78.46% |
+| MAE-only | 63.37% | 64.29% | 50.73% | 75.09% |
+| MAE+JEPA | 64.93% | 66.88% | 51.56% | 76.34% |
+| JEPA-only | 64.99% | 67.96% | 50.67% | 76.34% |
+| DINO+MAE (control) | 67.73% | 70.93% | 54.00% | 78.25% |
+| DINO+MAE+JEPA | 68.41% | 72.41% | 55.29% | 77.52% |
+
+### Interpretation
+
+- **JEPA complements DINO**: DINO+JEPA (67.91%) is close to DINO+MAE (67.73%) and adds +1.13 points over DINO-only. This suggests JEPA can partially substitute for MAE when DINO is present.
+- **JEPA also helps MAE**: MAE+JEPA (64.93%) adds +1.56 points over MAE-only, but the absolute level remains well below DINO-based combinations.
+- **JEPA-only is insufficient**: 64.99% is below DINO-only and only slightly above MAE-only.
+- **DINO+MAE+JEPA is still best**: 68.41% edges out DINO+JEPA (67.91%), so the third signal still adds marginal value.
+- **Complementarity**: Cannot be measured from current eval artifacts because `run_dsva_checkpoint_attack.py` outputs only per-victim aggregates, not per-image correctness flags.
+
+### Recommendation
+
+The gain is small, but it is consistent across seeds and concentrated on CNN victims (ResNet-50, ConvNeXt-Tiny). DINO+JEPA nearly matches DINO+MAE, which is a stronger signal than the original DINO+MAE+JEPA delta alone. Do not scale JEPA as a MAE replacement yet, but continue exploring higher JEPA weights or longer continuation budgets before closing the line.
+
 ## CE ResNet-50, Strong Engine, Epsilon 16/255
 
 Same strong CE baseline as above, but with `epsilon=16/255` and `step_size=4/255`.
@@ -282,7 +324,10 @@ Mean non-surrogate transfer success: **13.21%**
 - The best JEPA signal so far is the I-JEPA encoder, not predictor inconsistency.
 - Naive I-JEPA encoder disruption beat naive DINOv2 feature disruption, but generator-scale dSVA is the real comparison point.
 - Heavy `DINO+MAE+JEPA` from scratch hurt transfer; low-weight normalized continuation is the promising path.
-- Official dSVA + normalized I-JEPA continuation improves repeated-seed full-val mean transfer from `67.73%` to `68.39%`.
+- Official dSVA + normalized I-JEPA continuation improves repeated-seed full-val mean transfer from `67.73%` to `68.41%`.
 - The gain is positive for all three seeds and compared against a matched extra-training control, but it is small.
 - The earlier 1000-image official dSVA continuation result (`84.69% -> 85.58%`) was directionally consistent but optimistic in absolute score.
-- Next: inspect per-victim gains and ablate whether JEPA complements DINO, MAE, or only their combination.
+- Per-victim: gain comes from ResNet-50 (+1.49) and ConvNeXt-Tiny (+1.29); ViT-B/16 drops slightly (-0.72).
+- DINO+JEPA (67.91%) is close to DINO+MAE (67.73%), suggesting JEPA can partially substitute for MAE, but DINO+MAE+JEPA (68.41%) remains the best combination.
+- JEPA-only is insufficient (64.99%). Do not replace DINO with JEPA.
+- Next: test whether a higher JEPA weight or longer continuation budget can enlarge the CNN-targeted gain without hurting ViT transfer.
