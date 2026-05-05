@@ -13,7 +13,7 @@ dSVA is not a neutral benchmark: intermediate ViT facets, attention guidance, an
 
 ## Next Step
 
-Validate the normalized official dSVA + low-weight I-JEPA continuation signal on a larger eval set or repeated seeds. The current 1000-image check is positive but small: `84.69% -> 85.58%`.
+Analyze the Phase 9 per-victim results and run the next ablation that explains the small but consistent official dSVA + I-JEPA gain. Priorities: identify which victim architectures improved, test whether JEPA complements DINO or MAE specifically, and decide whether to scale the continuation or redesign the loss.
 
 ## Phases
 
@@ -26,8 +26,9 @@ Validate the normalized official dSVA + low-weight I-JEPA continuation signal on
 - Phase 5: stronger transfer engine shared by all objectives: started with momentum, input diversity, and translation smoothing
 - Phase 6: JEPA hybrids, especially `JEPA encoder + CE`: first strong-engine run did not beat CE-only
 - Phase 7: JEPA generator trained with dSVA architecture: first 1000-image run is below JEPA PGD
-- Phase 8: official dSVA + normalized I-JEPA continuation: initial 1000-image eval gives a small positive matched gain
-- Phase 9: larger randomized/balanced evaluation set
+- ~~Phase 8: official dSVA + normalized I-JEPA continuation: initial 1000-image eval gives a small positive matched gain~~
+- ~~Phase 9: larger randomized/balanced evaluation set: full-val repeated-seed gain is positive but small, `67.73% -> 68.39%`~~
+- Phase 10: per-architecture and objective ablations
 
 ## Decision Rule
 
@@ -35,7 +36,7 @@ Scale JEPA if the official dSVA continuation gain survives larger validation, im
 
 ## Day-One Read
 
-Promising: I-JEPA encoder features beat naive DINO features in early diagnostics, and normalized low-weight JEPA continuation slightly improved the released dSVA checkpoint on 1000 validation images.
+Promising: I-JEPA encoder features beat naive DINO features in early diagnostics, and normalized low-weight JEPA continuation slightly improved the released dSVA checkpoint under matched full-val repeated-seed validation.
 
 Not proven: JEPA replacing DINO, JEPA-only sufficiency, predictor-based attacks, and full dSVA reproduction fidelity.
 

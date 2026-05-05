@@ -203,6 +203,20 @@ Started from the released dSVA checkpoint, continued for one epoch on 1000 Image
 
 Matched gain: **+0.89 points**. Treat as a positive but small signal until full-set or repeated-seed validation.
 
+## Phase 9: Official dSVA + I-JEPA Full-Val Repeated Seeds, Epsilon 16/255
+
+Started from the released dSVA checkpoint and compared matched one-epoch continuations on 1000 Imagenette train images. Evaluation uses full Imagenette validation coverage via `eval_limit=5000`. Each seed compares the same extra training budget: DINO+MAE continuation control vs normalized DINO+MAE+I-JEPA with `jepa_weight=0.05` and `lr=5e-5`.
+
+| seed | DINO+MAE control mean | DINO+MAE+I-JEPA mean | matched gain |
+| --- | ---: | ---: | ---: |
+| 0 | 68.96% | 69.90% | +0.94 pts |
+| 1 | 66.92% | 67.19% | +0.27 pts |
+| 2 | 67.33% | 68.09% | +0.77 pts |
+
+Across seeds: control **67.73% +/- 1.08**, I-JEPA **68.39% +/- 1.38**, matched gain **+0.66 +/- 0.35 points**.
+
+This confirms a small positive I-JEPA continuation signal against a proper extra-training control. The absolute full-val score is lower than the earlier 1000-image validation result, so the earlier `84.69% -> 85.58%` read should be treated as an optimistic subset estimate rather than the headline result.
+
 ## CE ResNet-50, Strong Engine, Epsilon 16/255
 
 Same strong CE baseline as above, but with `epsilon=16/255` and `step_size=4/255`.
@@ -272,7 +286,8 @@ Mean non-surrogate transfer success: **13.21%**
 - The local dSVA-style retraining run reaches I-JEPA PGD territory but remains far below the released ImageNet-trained dSVA checkpoint.
 - Naively adding I-JEPA to the local DINO+MAE generator at weight `0.25` hurts transfer badly.
 - Low-weight I-JEPA fine-tuning of a trained DINO+MAE generator improves the local dSVA-style generator from `33.27%` to `45.49%`.
-- On the released dSVA checkpoint, normalized low-weight I-JEPA continuation improves the 1000-image validation mean from `84.69%` to `85.58%`; this is promising but small enough to require larger validation.
+- On the released dSVA checkpoint, normalized low-weight I-JEPA continuation improves the repeated-seed full-val mean from `67.73%` to `68.39%`; the gain is positive for all three seeds but small.
+- The earlier 1000-image official dSVA continuation result (`84.69% -> 85.58%`) was directionally consistent but too optimistic in absolute score.
 - At `16/255`, I-JEPA encoder PGD beats CE ResNet-50 on mean transfer but remains far below the released dSVA generator.
 - The first I-JEPA generator is weaker than I-JEPA PGD, so generator architecture alone is not enough.
 - The strong-engine CE baseline is now the best result; the first CE + I-JEPA hybrid did not beat CE-only.
