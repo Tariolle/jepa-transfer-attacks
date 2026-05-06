@@ -33,7 +33,10 @@ See [RESULTS.md](RESULTS.md) and [ROADMAP.md](ROADMAP.md).
 
 See [SOTA_BASELINE.md](SOTA_BASELINE.md) for the external baseline target. The current DINOv2 token attack is a diagnostic, not a SOTA-grade dSVA reproduction.
 
-Colab entry point for Phase 9 validation: [notebooks/phase9_dsva_jepa_validation_colab.ipynb](notebooks/phase9_dsva_jepa_validation_colab.ipynb).
+Colab entry points:
+
+- Phase 9/10 validation and objective ablations: [notebooks/phase9_dsva_jepa_validation_colab.ipynb](notebooks/phase9_dsva_jepa_validation_colab.ipynb)
+- Phase 11 JEPA weight and continuation-budget scaling: [notebooks/phase11_jepa_scale_colab.ipynb](notebooks/phase11_jepa_scale_colab.ipynb)
 
 ## Run Examples
 

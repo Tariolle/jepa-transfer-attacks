@@ -13,7 +13,7 @@ dSVA is not a neutral benchmark: intermediate ViT facets, attention guidance, an
 
 ## Next Step
 
-Test higher JEPA weights (0.1, 0.2) or longer continuation budgets (2-3 epochs) to see if the CNN-targeted gain can be enlarged without hurting ViT transfer. If the DINO+JEPA near-parity with DINO+MAE holds at larger budgets, MAE could be phased out in favor of JEPA.
+Run the Phase 11 Colab notebook to test higher JEPA weights (0.1, 0.2) and longer continuation budgets (2-3 epochs). The goal is to see if the CNN-targeted gain can be enlarged without hurting ViT transfer. If the DINO+JEPA near-parity with DINO+MAE holds at larger budgets, MAE could be phased out in favor of JEPA.
 
 ## Phases
 
@@ -29,7 +29,7 @@ Test higher JEPA weights (0.1, 0.2) or longer continuation budgets (2-3 epochs) 
 - ~~Phase 8: official dSVA + normalized I-JEPA continuation: initial 1000-image eval gives a small positive matched gain~~
 - ~~Phase 9: larger randomized/balanced evaluation set: full-val repeated-seed gain is positive but small, `67.73% -> 68.41%`~~
 - ~~Phase 10: per-architecture and objective ablations~~
-- Phase 11: scale JEPA weight or continuation budget to test if the CNN gain can be enlarged
+- Phase 11: scale JEPA weight or continuation budget to test if the CNN gain can be enlarged: Colab runner added, results pending
 
 ## Decision Rule
 

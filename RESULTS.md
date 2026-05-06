@@ -259,6 +259,21 @@ Across-seed mean transfer success for each continuation objective:
 
 The gain is small, but it is consistent across seeds and concentrated on CNN victims (ResNet-50, ConvNeXt-Tiny). DINO+JEPA nearly matches DINO+MAE, which is a stronger signal than the original DINO+MAE+JEPA delta alone. Do not scale JEPA as a MAE replacement yet, but continue exploring higher JEPA weights or longer continuation budgets before closing the line.
 
+## Phase 11: JEPA Weight and Continuation-Budget Scaling
+
+Status: Colab runner prepared, results pending.
+
+Entry point: `notebooks/phase11_jepa_scale_colab.ipynb`.
+
+Planned tests:
+
+| test | configs | epochs | seeds |
+| --- | --- | ---: | --- |
+| JEPA weight sweep | `0.05`, `0.1`, `0.2` at `lr=5e-5` | 1 | `0,1,2` |
+| longer continuation | `0.05` at `lr=5e-5` | 2, 3 | `0,1,2` |
+
+The decision is whether higher JEPA weight or longer continuation enlarges the CNN-targeted gain without degrading ViT-B/16 enough to erase the mean transfer improvement.
+
 ## CE ResNet-50, Strong Engine, Epsilon 16/255
 
 Same strong CE baseline as above, but with `epsilon=16/255` and `step_size=4/255`.
