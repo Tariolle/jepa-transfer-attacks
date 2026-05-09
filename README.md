@@ -38,7 +38,7 @@ See [SOTA_BASELINE.md](SOTA_BASELINE.md) for the external baseline target. The c
 Notebook entry points:
 
 - Phase 9/10 validation and objective ablations: [notebooks/phase9_dsva_jepa_validation_colab.ipynb](notebooks/phase9_dsva_jepa_validation_colab.ipynb)
-- Phase 11 JEPA weight and continuation-budget scaling, local GPU runner: [notebooks/phase11_jepa_scale.ipynb](notebooks/phase11_jepa_scale.ipynb)
+- Phase 11/12 JEPA weight, continuation-budget, and broader-victim scaling, local GPU runner: [notebooks/phase11_jepa_scale.ipynb](notebooks/phase11_jepa_scale.ipynb)
 
 ## Run Examples
 

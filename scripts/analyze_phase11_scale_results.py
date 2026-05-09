@@ -7,17 +7,14 @@ import sys
 from pathlib import Path
 
 
-VICTIMS = ["resnet50", "convnext_tiny", "vit_b_16"]
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Aggregate Phase 11 JEPA weight and continuation-budget sweeps."
+        description="Aggregate JEPA weight and continuation-budget sweeps."
     )
     parser.add_argument(
         "--scale-root",
         default="results/phase11_jepa_scale",
-        help="Root directory containing seed_* folders with Phase 11 sweep summaries.",
+        help="Root directory containing seed_* folders with sweep summaries.",
     )
     parser.add_argument(
         "--output-detail-csv",
@@ -80,6 +77,7 @@ def main() -> None:
         sys.exit(1)
 
     detail_rows: list[dict[str, str | float | int]] = []
+    victims: list[str] = []
     for summary_path in sorted(root.glob("seed_*/*_summary.csv")):
         rows = read_csv(summary_path)
         for row in rows:
@@ -101,12 +99,14 @@ def main() -> None:
                 "seed": int(seed),
                 "mean_transfer_success": row.get("mean_transfer_success", ""),
             }
-            for victim in VICTIMS:
+            for victim in eval_metrics:
+                if victim not in victims:
+                    victims.append(victim)
                 out[victim] = eval_metrics.get(victim, "")
             detail_rows.append(out)
 
     if not detail_rows:
-        print("No Phase 11 rows found.", file=sys.stderr)
+        print("No sweep rows found.", file=sys.stderr)
         sys.exit(1)
 
     detail_fields = [
@@ -120,7 +120,7 @@ def main() -> None:
         "eval_limit",
         "seed",
         "mean_transfer_success",
-        *VICTIMS,
+        *victims,
     ]
     with detail_csv.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=detail_fields)
@@ -154,8 +154,8 @@ def main() -> None:
             "mean_transfer_success": f"{mean(transfers):.6f}" if transfers else "",
             "std_transfer_success": f"{stdev(transfers):.6f}" if transfers else "",
         }
-        for victim in VICTIMS:
-            values = [float(row[victim]) for row in rows if row[victim] != ""]
+        for victim in victims:
+            values = [float(row[victim]) for row in rows if row.get(victim, "") != ""]
             out[f"{victim}_mean"] = f"{mean(values):.6f}" if values else ""
             out[f"{victim}_std"] = f"{stdev(values):.6f}" if values else ""
         aggregate_rows.append(out)
@@ -171,7 +171,7 @@ def main() -> None:
         "mean_transfer_success",
         "std_transfer_success",
     ]
-    for victim in VICTIMS:
+    for victim in victims:
         aggregate_fields.extend([f"{victim}_mean", f"{victim}_std"])
 
     with aggregate_csv.open("w", newline="", encoding="utf-8") as handle:
