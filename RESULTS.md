@@ -261,18 +261,46 @@ The gain is small, but it is consistent across seeds and concentrated on CNN vic
 
 ## Phase 11: JEPA Weight and Continuation-Budget Scaling
 
-Status: Colab runner prepared, results pending.
+Completed locally with the Phase 11 notebook.
 
-Entry point: `notebooks/phase11_jepa_scale_colab.ipynb`.
+Entry point: `notebooks/phase11_jepa_scale.ipynb`.
 
-Planned tests:
+Settings:
 
 | test | configs | epochs | seeds |
 | --- | --- | ---: | --- |
 | JEPA weight sweep | `0.05`, `0.1`, `0.2` at `lr=5e-5` | 1 | `0,1,2` |
 | longer continuation | `0.05` at `lr=5e-5` | 2, 3 | `0,1,2` |
 
-The decision is whether higher JEPA weight or longer continuation enlarges the CNN-targeted gain without degrading ViT-B/16 enough to erase the mean transfer improvement.
+All runs start from the released dSVA checkpoint, train on 1000 Imagenette train images, evaluate with full Imagenette validation coverage via `eval_limit=5000`, and compare against a matched DINO+MAE continuation control with the same seed, LR, epoch count, and training budget. Training uses normalized loss weights.
+
+### Aggregate Results
+
+| run | control mean | JEPA mean | matched gain |
+| --- | ---: | ---: | ---: |
+| `jepa_weight=0.05`, 1 epoch | 67.53% | 68.03% | +0.50 pts |
+| `jepa_weight=0.1`, 1 epoch | 67.53% | 68.62% | **+1.09 pts** |
+| `jepa_weight=0.2`, 1 epoch | 67.53% | 68.61% | **+1.09 pts** |
+| `jepa_weight=0.05`, 2 epochs | 65.68% | 66.47% | +0.79 pts |
+| `jepa_weight=0.05`, 3 epochs | 66.55% | 67.40% | +0.85 pts |
+
+### Per-Victim Matched Gains
+
+| run | resnet50 | convnext_tiny | vit_b_16 |
+| --- | ---: | ---: | ---: |
+| `jepa_weight=0.05`, 1 epoch | +1.19 pts | +1.07 pts | -0.75 pts |
+| `jepa_weight=0.1`, 1 epoch | **+1.78 pts** | **+2.07 pts** | -0.57 pts |
+| `jepa_weight=0.2`, 1 epoch | +1.51 pts | +1.93 pts | -0.17 pts |
+| `jepa_weight=0.05`, 2 epochs | +0.77 pts | +0.94 pts | +0.66 pts |
+| `jepa_weight=0.05`, 3 epochs | +0.41 pts | +0.18 pts | +1.95 pts |
+
+### Interpretation
+
+Phase 11 strengthens the continuation story. Higher JEPA weights roughly double the one-epoch matched gain, and the gain is positive for all three seeds. The best mean result is `jepa_weight=0.1`, while `jepa_weight=0.2` is effectively tied and has the smallest ViT-B/16 penalty.
+
+The architectural pattern from Phase 10 still matters: `jepa_weight=0.1` is driven by ResNet-50 and ConvNeXt-Tiny improvements, while ViT-B/16 slightly drops. Longer `jepa_weight=0.05` continuation stays positive, but it does not beat the tuned one-epoch `0.1`/`0.2` runs.
+
+Recommendation: continue to Phase 12. The paper-worthy claim is narrow but alive: I-JEPA encoder disruption appears to be a complementary predictive-representation objective for dSVA-style generator training, especially for CNN victim transfer. The next test should tune `jepa_weight=0.1` and `0.2` at longer continuation budgets and add broader victims before scaling to larger ImageNet validation.
 
 ## CE ResNet-50, Strong Engine, Epsilon 16/255
 
@@ -339,10 +367,11 @@ Mean non-surrogate transfer success: **13.21%**
 - The best JEPA signal so far is the I-JEPA encoder, not predictor inconsistency.
 - Naive I-JEPA encoder disruption beat naive DINOv2 feature disruption, but generator-scale dSVA is the real comparison point.
 - Heavy `DINO+MAE+JEPA` from scratch hurt transfer; low-weight normalized continuation is the promising path.
-- Official dSVA + normalized I-JEPA continuation improves repeated-seed full-val mean transfer from `67.73%` to `68.41%`.
-- The gain is positive for all three seeds and compared against a matched extra-training control, but it is small.
+- Official dSVA + normalized I-JEPA continuation first improved repeated-seed full-val mean transfer from `67.73%` to `68.41%`.
+- Phase 11 tuning improves the repeated-seed matched gain to about `+1.09` points at `jepa_weight=0.1` and `0.2`.
+- The gain is positive for all three seeds and compared against a matched extra-training control, but it remains modest.
 - The earlier 1000-image official dSVA continuation result (`84.69% -> 85.58%`) was directionally consistent but optimistic in absolute score.
 - Per-victim: gain comes from ResNet-50 (+1.49) and ConvNeXt-Tiny (+1.29); ViT-B/16 drops slightly (-0.72).
 - DINO+JEPA (67.91%) is close to DINO+MAE (67.73%), suggesting JEPA can partially substitute for MAE, but DINO+MAE+JEPA (68.41%) remains the best combination.
 - JEPA-only is insufficient (64.99%). Do not replace DINO with JEPA.
-- Next: test whether a higher JEPA weight or longer continuation budget can enlarge the CNN-targeted gain without hurting ViT transfer.
+- Next: test tuned `jepa_weight=0.1`/`0.2` at longer continuation budgets and broader victims.

@@ -44,7 +44,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-pretrained", action="store_true", help="Use randomly initialized victims for smoke tests only.")
     parser.add_argument("--torch-home", default=str(REPO_ROOT / ".torch_cache"), help="Cache directory for torch model weights.")
     parser.add_argument("--output-csv", default="results/dsva_checkpoint.csv")
+    parser.add_argument("--amp", action="store_true", help="Use CUDA autocast during generator and victim inference.")
+    parser.add_argument("--compile", action="store_true", help="Compile the generator and victim classifiers with torch.compile.")
+    parser.add_argument("--compile-mode", default="reduce-overhead", help="torch.compile mode, for example reduce-overhead.")
     return parser.parse_args()
+
+
+def maybe_compile(module: torch.nn.Module, enabled: bool, mode: str) -> torch.nn.Module:
+    if not enabled:
+        return module
+    if not hasattr(torch, "compile"):
+        raise RuntimeError("torch.compile is not available in this PyTorch build")
+    return torch.compile(module, mode=mode)
+
+
+def mark_compile_step(enabled: bool) -> None:
+    if enabled and hasattr(torch, "compiler") and hasattr(torch.compiler, "cudagraph_mark_step_begin"):
+        torch.compiler.cudagraph_mark_step_begin()
 
 
 def make_adversarial(
@@ -65,6 +81,14 @@ def main() -> None:
 
     generator = load_dsva_generator(args.checkpoint, device=device)
     classifiers = load_classifiers(args.victims, device=device, pretrained=not args.no_pretrained)
+    if device.type == "cuda":
+        torch.backends.cudnn.benchmark = True
+        torch.set_float32_matmul_precision("high")
+    generator = maybe_compile(generator, args.compile, args.compile_mode)
+    classifiers = {
+        name: maybe_compile(model, args.compile, args.compile_mode)
+        for name, model in classifiers.items()
+    }
 
     dataset = ImageNetStyleFolder(
         root=args.data_root,
@@ -87,12 +111,19 @@ def main() -> None:
     for images, labels, _paths in tqdm(loader, desc="dSVA checkpoint transfer"):
         images = images.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
-        adv = make_adversarial(generator, images, args.epsilon, args.output_mode)
-        max_delta = max(max_delta, float((adv - images).abs().max().item()))
-
         with torch.no_grad():
+            with torch.amp.autocast("cuda", enabled=args.amp and device.type == "cuda"):
+                mark_compile_step(args.compile)
+                adv = make_adversarial(generator, images, args.epsilon, args.output_mode)
+            max_delta = max(max_delta, float((adv - images).abs().max().item()))
             for name, model in classifiers.items():
-                meters[name].update(model(images), model(adv), labels)
+                with torch.amp.autocast("cuda", enabled=args.amp and device.type == "cuda"):
+                    mark_compile_step(args.compile)
+                    clean_logits = model(images)
+                    clean_logits = clean_logits.clone()
+                    mark_compile_step(args.compile)
+                    adv_logits = model(adv)
+                meters[name].update(clean_logits, adv_logits, labels)
 
     rows = [meters[name].as_row(name) for name in args.victims]
     print(format_table(rows))

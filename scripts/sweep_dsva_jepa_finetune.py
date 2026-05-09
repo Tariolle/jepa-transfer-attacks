@@ -91,6 +91,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--hf-cache-dir", default=None)
     parser.add_argument("--local-files-only", action="store_true")
     parser.add_argument("--no-amp", action="store_true", help="Disable AMP during training.")
+    parser.add_argument("--eval-amp", action="store_true", help="Use CUDA autocast during evaluation.")
+    parser.add_argument("--compile", action="store_true", help="Use torch.compile for training modules.")
+    parser.add_argument("--eval-compile", action="store_true", help="Use torch.compile for evaluation modules.")
+    parser.add_argument("--compile-mode", default="reduce-overhead", help="torch.compile mode forwarded to train/eval scripts.")
     parser.add_argument(
         "--normalize-loss-weights",
         action="store_true",
@@ -194,6 +198,8 @@ def main() -> None:
             train_cmd.append("--disable-mae")
         if not args.no_amp:
             train_cmd.append("--amp")
+        if args.compile:
+            train_cmd.extend(["--compile", "--compile-mode", args.compile_mode])
         if args.hf_cache_dir:
             train_cmd.extend(["--hf-cache-dir", args.hf_cache_dir])
         if args.local_files_only:
@@ -227,6 +233,10 @@ def main() -> None:
             "--seed",
             str(args.seed),
         ]
+        if args.eval_amp:
+            eval_cmd.append("--amp")
+        if args.eval_compile:
+            eval_cmd.extend(["--compile", "--compile-mode", args.compile_mode])
 
         if args.skip_existing and checkpoint.exists():
             print(f"\nSkipping train for existing checkpoint: {checkpoint}")

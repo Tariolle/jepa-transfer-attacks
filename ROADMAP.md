@@ -13,7 +13,7 @@ dSVA is not a neutral benchmark: intermediate ViT facets, attention guidance, an
 
 ## Next Step
 
-Run the Phase 11 Colab notebook to test higher JEPA weights (0.1, 0.2) and longer continuation budgets (2-3 epochs). The goal is to see if the CNN-targeted gain can be enlarged without hurting ViT transfer. If the DINO+JEPA near-parity with DINO+MAE holds at larger budgets, MAE could be phased out in favor of JEPA.
+Run Phase 12 as a paper-kill experiment. Phase 11 showed that increasing the JEPA continuation weight from `0.05` to `0.1`/`0.2` roughly doubles the matched mean gain, with strongest improvements on CNN victims. The next question is whether tuned JEPA weights survive longer continuation and broader victim coverage, or whether the gain is an Imagenette/victim-set artifact.
 
 ## Phases
 
@@ -29,15 +29,28 @@ Run the Phase 11 Colab notebook to test higher JEPA weights (0.1, 0.2) and longe
 - ~~Phase 8: official dSVA + normalized I-JEPA continuation: initial 1000-image eval gives a small positive matched gain~~
 - ~~Phase 9: larger randomized/balanced evaluation set: full-val repeated-seed gain is positive but small, `67.73% -> 68.41%`~~
 - ~~Phase 10: per-architecture and objective ablations~~
-- Phase 11: scale JEPA weight or continuation budget to test if the CNN gain can be enlarged: Colab runner added, results pending
+- ~~Phase 11: scale JEPA weight or continuation budget to test if the CNN gain can be enlarged: `jepa_weight=0.1` and `0.2` both improve matched mean transfer by about +1.09 points~~
+- Phase 12: validate tuned JEPA continuation with longer budgets and broader victims
 
 ## Decision Rule
 
-Scale JEPA if the official dSVA continuation gain survives larger validation, improves cross-family transfer, or adds complementary failures. Do not require the predictor-only objective to win by itself.
+Scale JEPA if tuned continuation (`jepa_weight=0.1` or `0.2`) survives longer validation, improves cross-family transfer on additional CNN/Transformer victims, or adds complementary per-image failures. Do not require the predictor-only objective to win by itself.
+
+## Phase 12 Protocol
+
+Use the local Phase 11 notebook as the runner and extend the matrix rather than repeating completed baselines:
+
+| experiment | configs | epochs | decision target |
+| --- | --- | ---: | --- |
+| tuned longer continuation | `0.1:0.00005`, `0.2:0.00005` | 2 | test whether Phase 11 gains scale |
+| tuned longer continuation | `0.1:0.00005`, `0.2:0.00005` | 3 | test over-continuation risk |
+| broader victims | best tuned config | 1-2 | test whether CNN gains generalize |
+
+Continue toward a paper if the tuned JEPA run preserves at least a +1 point matched mean gain, keeps CNN gains around +2 points or better, avoids a mean-erasing Transformer penalty, and shows complementary per-image failures. Downscope if the gain vanishes under longer controls, broader victims, or per-image analysis.
 
 ## Day-One Read
 
-Promising: I-JEPA encoder features beat naive DINO features in early diagnostics, and normalized low-weight JEPA continuation slightly improved the released dSVA checkpoint under matched full-val repeated-seed validation.
+Promising: I-JEPA encoder features beat naive DINO features in early diagnostics, normalized low-weight JEPA continuation slightly improved the released dSVA checkpoint, and Phase 11 tuning grew the matched full-val repeated-seed gain to about +1.09 points at `jepa_weight=0.1`/`0.2`.
 
 Not proven: JEPA replacing DINO, JEPA-only sufficiency, predictor-based attacks, and full dSVA reproduction fidelity.
 

@@ -68,6 +68,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--log-csv", default="results/dsva_retrained_generator_log.csv")
     parser.add_argument("--log-every", type=int, default=10)
     parser.add_argument("--amp", action="store_true", help="Use CUDA autocast and GradScaler for lower memory use.")
+    parser.add_argument("--compile", action="store_true", help="Compile the trainable generator with torch.compile.")
+    parser.add_argument("--compile-mode", default="reduce-overhead", help="torch.compile mode, for example reduce-overhead.")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--no-pretrained", action="store_true", help="Use randomly initialized encoders for smoke tests only.")
@@ -75,6 +77,31 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--hf-cache-dir", default=None, help="Optional Hugging Face cache directory.")
     parser.add_argument("--local-files-only", action="store_true", help="Load Hugging Face models from local cache only.")
     return parser.parse_args()
+
+
+def maybe_compile(module, enabled: bool, mode: str):
+    if module is None or not enabled:
+        return module
+    if not hasattr(torch, "compile"):
+        raise RuntimeError("torch.compile is not available in this PyTorch build")
+    if mode == "reduce-overhead":
+        try:
+            return torch.compile(module, options={"triton.cudagraphs": False})
+        except RuntimeError as exc:
+            if "Unexpected optimization option" not in str(exc):
+                raise
+    return torch.compile(module, mode=mode)
+
+
+def state_dict_for_save(module: torch.nn.Module) -> dict[str, torch.Tensor]:
+    original = getattr(module, "_orig_mod", module)
+    return original.state_dict()
+
+
+def mark_compile_step(enabled: bool) -> None:
+    if enabled and hasattr(torch, "compiler") and hasattr(torch.compiler, "cudagraph_mark_step_begin"):
+        torch.compiler.cudagraph_mark_step_begin()
+
 
 
 def load_generator(args: argparse.Namespace, device: torch.device) -> DSVAGenerator:
@@ -170,6 +197,10 @@ def main() -> None:
         mae.eval()
     if jepa is not None:
         jepa.eval()
+    if device.type == "cuda":
+        torch.backends.cudnn.benchmark = True
+        torch.set_float32_matmul_precision("high")
+    generator = maybe_compile(generator, args.compile, args.compile_mode)
 
     dataset = ImageNetStyleFolder(
         root=args.data_root,
@@ -209,7 +240,8 @@ def main() -> None:
                 clean_jepa = jepa(images).detach() if jepa is not None else None
 
             with torch.amp.autocast("cuda", enabled=args.amp and device.type == "cuda"):
-                adv = project_generator_output(generator(images), images, args.epsilon, args.output_mode)
+                mark_compile_step(args.compile)
+                adv = project_generator_output(generator(images), images, args.epsilon, args.output_mode).clone()
                 total_disruption = torch.zeros((), device=device)
                 dino_disruption = None
                 mae_disruption = None
@@ -268,7 +300,7 @@ def main() -> None:
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad(set_to_none=True)
-        torch.save(generator.state_dict(), output_checkpoint)
+        torch.save(state_dict_for_save(generator), output_checkpoint)
 
     with log_csv.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))

@@ -25,18 +25,20 @@ JEPA should be compared against DINO/MAE and supervised baselines under the same
 
 - Naive I-JEPA encoder disruption beat naive DINOv2 feature disruption in early diagnostics.
 - Predictor-style JEPA objectives were weak in first vanilla setups.
-- The current best signal is low-weight I-JEPA added to an official dSVA continuation.
+- The current best signal is I-JEPA encoder disruption added to an official dSVA continuation.
 
-Headline result: matched full-val repeated-seed dSVA continuation improved from **67.73%** to **68.39%** mean transfer. The gain is small but positive for all three seeds, and it is compared against the same extra training budget without JEPA.
+Headline result: Phase 11 matched full-val repeated-seed dSVA continuation improved from **67.53%** to **68.62%** mean transfer at `jepa_weight=0.1`, a **+1.09 point** gain. The `jepa_weight=0.2` run tied the mean gain while reducing the ViT penalty. Gains are strongest on CNN victims: roughly **+1.78 points** on ResNet-50 and **+2.07 points** on ConvNeXt-Tiny at `jepa_weight=0.1`, with ViT-B/16 down **0.57 points**.
+
+The project remains promising, but the claim is narrow: JEPA is not a standalone replacement for DINO/MAE. It appears to be a complementary predictive-representation objective for dSVA-style generator training, especially for cross-family CNN transfer.
 
 See [RESULTS.md](RESULTS.md) and [ROADMAP.md](ROADMAP.md).
 
 See [SOTA_BASELINE.md](SOTA_BASELINE.md) for the external baseline target. The current DINOv2 token attack is a diagnostic, not a SOTA-grade dSVA reproduction.
 
-Colab entry points:
+Notebook entry points:
 
 - Phase 9/10 validation and objective ablations: [notebooks/phase9_dsva_jepa_validation_colab.ipynb](notebooks/phase9_dsva_jepa_validation_colab.ipynb)
-- Phase 11 JEPA weight and continuation-budget scaling: [notebooks/phase11_jepa_scale_colab.ipynb](notebooks/phase11_jepa_scale_colab.ipynb)
+- Phase 11 JEPA weight and continuation-budget scaling, local GPU runner: [notebooks/phase11_jepa_scale.ipynb](notebooks/phase11_jepa_scale.ipynb)
 
 ## Run Examples
 
