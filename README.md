@@ -1,48 +1,73 @@
 # JEPA Transfer Attacks
 
-JEPA-guided continuation for improving black-box transfer of released dSVA adversarial generators.
+Negative result from testing whether I-JEPA features improve black-box adversarial transfer when added to a released dSVA generator.
 
-The project is not predictor-only. We test JEPA as an attack family:
+## Hypothesis
 
-- `JEPA-Encoder`: disrupt I-JEPA encoder features.
-- `JEPA-Predictor`: break context-to-target prediction.
-- `JEPA-Hybrid`: combine encoder, predictor, SSL, or supervised losses.
+I-JEPA representations might add a useful predictive-representation signal to dSVA-style generator training. The main test was whether continuing a released dSVA checkpoint with `DINO+MAE+I-JEPA` improves transfer beyond both:
 
-The practical goal is honest transferability gains from JEPA-guided continuation of strong generator checkpoints. Ablations decide whether the useful signal comes from the encoder, the predictor, or their combination.
+- the untouched released dSVA checkpoint
+- a matched `DINO+MAE` continuation baseline
 
-## Fair Comparison
+## Method
 
-Separate the attack objective from the attack engine.
+The experiments start from the released dSVA checkpoint and continue training the generator on small ImageNet-style subsets. Evaluation uses transfer success across multiple victim architectures:
 
-| Layer | Examples |
+- `resnet50`
+- `convnext_tiny`
+- `vit_b_16`
+- `efficientnet_b0`
+- `swin_t`
+
+Main comparisons:
+
+| run | role |
 | --- | --- |
-| Objective | CE, DINO/MAE features, JEPA encoder, JEPA predictor, hybrids |
-| Engine | PGD, momentum, input diversity, translation/scale tricks, ensembles, generators |
+| untouched released dSVA | do-nothing baseline |
+| `DINO+MAE` continuation | matched continuation control |
+| `DINO+MAE+I-JEPA` continuation | tested hypothesis |
 
-JEPA should be compared against DINO/MAE and supervised baselines under the same budget and attack engine. A vanilla JEPA run should not be judged against heavily optimized baselines.
+## Findings
 
-## Current Status
+Early Imagenette-scale experiments looked promising. Plain `DINO+MAE` continuation sometimes degraded the released checkpoint, while `DINO+MAE+I-JEPA` improved over both the matched continuation control and the untouched checkpoint. That suggests I-JEPA may act as a stabilizing or more robust continuation signal under narrow-data continuation.
 
-- Naive I-JEPA encoder disruption beat naive DINOv2 feature disruption in early diagnostics.
-- Predictor-style JEPA objectives were weak in first vanilla setups.
-- The current best signal is I-JEPA encoder disruption added to released dSVA continuation, judged against the untouched released checkpoint.
+The full ImageNet-val result did not support the stronger hypothesis:
 
-Headline result: full ImageNet-val validation improved the untouched released dSVA checkpoint from **68.92%** to **69.98%** mean transfer across five victims at `jepa_weight=0.3`, a **+1.06 point** gain. The matched DINO+MAE continuation reached **70.77%**, so the honest conclusion is that JEPA improves the released checkpoint, but does not yet beat the best continuation control.
+| run | mean transfer |
+| --- | ---: |
+| untouched released dSVA | 68.92% |
+| `DINO+MAE` continuation | **70.77%** |
+| `DINO+MAE+I-JEPA`, `jepa_weight=0.3` | 69.98% |
 
-The project remains promising, but the claim is narrow: JEPA is not a standalone replacement for DINO/MAE. It appears to be a complementary predictive-representation objective or stabilizing continuation objective for released dSVA-style generators.
+`DINO+MAE+I-JEPA` improves over the untouched checkpoint by **+1.06 points**, but it is **0.79 points worse** than the matched `DINO+MAE` continuation.
 
-See [RESULTS.md](RESULTS.md) and [ROADMAP.md](ROADMAP.md).
+Per-victim gains of `DINO+MAE+I-JEPA` vs untouched dSVA on full ImageNet-val:
 
-See [SOTA_BASELINE.md](SOTA_BASELINE.md) for the external baseline target. The current DINOv2 token attack is a diagnostic, not a SOTA-grade dSVA reproduction.
+| victim | gain |
+| --- | ---: |
+| resnet50 | +0.49 pts |
+| convnext_tiny | -2.43 pts |
+| vit_b_16 | +2.73 pts |
+| efficientnet_b0 | +1.23 pts |
+| swin_t | +3.27 pts |
 
-Notebook entry points:
+## Takeaway
 
-- Phase 9/10 validation and objective ablations: [notebooks/phase9_dsva_jepa_validation_colab.ipynb](notebooks/phase9_dsva_jepa_validation_colab.ipynb)
-- Phase 11/12 JEPA weight, continuation-budget, and broader-victim scaling, local GPU runner: [notebooks/phase11_jepa_scale.ipynb](notebooks/phase11_jepa_scale.ipynb)
-- Phase 13 methodology-clean baseline and JEPA-heavy ablation, local GPU runner: [notebooks/phase13_methodology_clean.ipynb](notebooks/phase13_methodology_clean.ipynb)
-- Phase 14 full-ImageNet validation of the best Phase 13 setting, local GPU runner: [notebooks/phase14_full_imagenet_validation.ipynb](notebooks/phase14_full_imagenet_validation.ipynb)
+The main hypothesis is **not supported**: adding I-JEPA to the best tested `DINO+MAE` continuation did not improve full ImageNet transfer.
 
-The Kaggle ImageNet localization zip can be prepared with:
+The narrower signal is still interesting: I-JEPA continuation can improve the released checkpoint over doing nothing, and it appears more helpful for transformer-family victims than for ConvNeXt. This is best treated as a mixed/negative result with a possible robustness or architecture-specific transfer signal, not as a SOTA attack.
+
+## Reproducibility
+
+Dense result logs are in [RESULTS.md](RESULTS.md). The current project direction and caveats are in [ROADMAP.md](ROADMAP.md).
+
+Main notebooks:
+
+- [Phase 11/12 JEPA scaling](notebooks/phase11_jepa_scale.ipynb)
+- [Phase 13 methodology-clean ablation](notebooks/phase13_methodology_clean.ipynb)
+- [Phase 14 full ImageNet validation](notebooks/phase14_full_imagenet_validation.ipynb)
+
+Prepare the Kaggle ImageNet localization archive with:
 
 ```powershell
 python scripts/prepare_kaggle_imagenet_subset.py `
@@ -50,62 +75,4 @@ python scripts/prepare_kaggle_imagenet_subset.py `
   --output-root imagenet_phase14 `
   --train-per-class 1 `
   --skip-existing
-```
-
-## Run Examples
-
-Add the same transfer-engine flags to any attack script when comparing stronger runs:
-
-```powershell
---momentum 1.0 --input-diversity-prob 0.7 --translation-kernel-size 5
-```
-
-Naive DINO/SSL feature baseline:
-
-```powershell
-python scripts/run_ssl_feature_attack.py `
-  --data-root D:\path\to\imagenette2-320\val `
-  --limit 100 `
-  --ssl-model vit_base_patch14_dinov2 `
-  --feature-mode tokens `
-  --token-loss `
-  --victims resnet50 convnext_tiny vit_b_16 `
-  --device cuda
-```
-
-Naive I-JEPA encoder attack:
-
-```powershell
-python scripts/run_ijepa_feature_attack.py `
-  --data-root D:\path\to\imagenette2-320\val `
-  --limit 100 `
-  --feature-mode tokens `
-  --token-loss `
-  --victims resnet50 convnext_tiny vit_b_16 `
-  --device cuda
-```
-
-Full Meta I-JEPA predictor attack:
-
-```powershell
-python scripts/run_ijepa_full_predictor_attack.py `
-  --data-root D:\path\to\imagenette2-320\val `
-  --ijepa-repo D:\path\to\ijepa `
-  --checkpoint D:\path\to\IN1K-vit.h.14-300e.pth.tar `
-  --limit 100 `
-  --target-block-size 7 `
-  --victims resnet50 convnext_tiny vit_b_16 `
-  --device cuda
-```
-
-Hybrid CE + I-JEPA encoder attack:
-
-```powershell
-python scripts/run_hybrid_ce_ijepa_attack.py `
-  --data-root D:\path\to\imagenette2-320\val `
-  --limit 100 `
-  --surrogate resnet50 `
-  --token-loss `
-  --victims resnet50 convnext_tiny vit_b_16 `
-  --device cuda
 ```

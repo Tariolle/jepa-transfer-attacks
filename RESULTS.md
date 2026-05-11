@@ -444,7 +444,7 @@ Per-victim JEPA `0.3` gains vs untouched:
 | efficientnet_b0 | +1.23 pts |
 | swin_t | +3.27 pts |
 
-Interpretation: full ImageNet validation supports a workshop/short-paper claim that JEPA-guided continuation improves the released dSVA checkpoint over doing nothing. It does not support claiming JEPA is better than a well-performing DINO+MAE continuation recipe, because the matched control is higher on this larger validation.
+Interpretation: full ImageNet validation closes the main hypothesis as negative. JEPA-guided continuation improves the released dSVA checkpoint over doing nothing, but it is worse than the matched DINO+MAE continuation. This is not a positive SOTA or workshop-paper result unless reframed as a short negative report.
 
 ## CE ResNet-50, Strong Engine, Epsilon 16/255
 
@@ -520,4 +520,4 @@ Mean non-surrogate transfer success: **13.21%**
 - Per-victim: gain comes from ResNet-50 (+1.49) and ConvNeXt-Tiny (+1.29); ViT-B/16 drops slightly (-0.72).
 - DINO+JEPA (67.91%) is close to DINO+MAE (67.73%), suggesting JEPA can partially substitute for MAE, but DINO+MAE+JEPA (68.41%) remains the best combination.
 - JEPA-only is insufficient (64.99%). Do not replace DINO with JEPA.
-- Next: diagnose why DINO+MAE continuation is now strong on ImageNet while JEPA helps transformer-family victims more than ConvNeXt; then write a short, carefully scoped result.
+- Final status: document as a mixed/negative result and archive unless pursuing a new, narrower hypothesis around per-architecture complementarity.
