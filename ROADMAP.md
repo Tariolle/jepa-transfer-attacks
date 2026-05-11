@@ -24,7 +24,3 @@ The only remaining signal is narrower:
 - On full ImageNet-val, I-JEPA helped ViT-B/16, Swin-T, EfficientNet-B0, and ResNet-50 versus untouched dSVA, but hurt ConvNeXt-Tiny.
 
 This may motivate a future per-architecture or complementarity study, but it is a new hypothesis, not a continuation of the original one.
-
-## Recommendation
-
-Archive the repository as a concise negative-result prototype. Do not run Phase 15 without a new research question.
