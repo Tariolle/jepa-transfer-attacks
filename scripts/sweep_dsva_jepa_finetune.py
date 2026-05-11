@@ -60,6 +60,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--train-root", default="imagenette2-320/train", help="Training root containing class subfolders.")
     parser.add_argument("--val-root", default="imagenette2-320/val", help="Validation root containing class subfolders.")
+    parser.add_argument("--class-map", default=None, help="Optional JSON mapping folder names to ImageNet class ids.")
+    parser.add_argument("--allow-folder-labels", action="store_true", help="Use local folder ids if no ImageNet id is known.")
     parser.add_argument("--init-checkpoint", default="results/dsva_retrained_eps16.pth")
     parser.add_argument("--output-dir", default="results/dsva_jepa_sweep")
     parser.add_argument("--run-prefix", default="dsva_jepa_ft")
@@ -204,6 +206,10 @@ def main() -> None:
             train_cmd.extend(["--hf-cache-dir", args.hf_cache_dir])
         if args.local_files_only:
             train_cmd.append("--local-files-only")
+        if args.class_map:
+            train_cmd.extend(["--class-map", args.class_map])
+        if args.allow_folder_labels:
+            train_cmd.append("--allow-folder-labels")
         if args.extra_train_args:
             train_cmd.extend(args.extra_train_args)
 
@@ -237,6 +243,10 @@ def main() -> None:
             eval_cmd.append("--amp")
         if args.eval_compile:
             eval_cmd.extend(["--compile", "--compile-mode", args.compile_mode])
+        if args.class_map:
+            eval_cmd.extend(["--class-map", args.class_map])
+        if args.allow_folder_labels:
+            eval_cmd.append("--allow-folder-labels")
 
         if args.skip_existing and checkpoint.exists():
             print(f"\nSkipping train for existing checkpoint: {checkpoint}")

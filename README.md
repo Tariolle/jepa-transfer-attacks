@@ -1,6 +1,6 @@
 # JEPA Transfer Attacks
 
-Research prototype for testing whether JEPA-trained representations can improve black-box adversarial transfer across CNN and ViT classifiers.
+JEPA-guided continuation for improving black-box transfer of released dSVA adversarial generators.
 
 The project is not predictor-only. We test JEPA as an attack family:
 
@@ -8,7 +8,7 @@ The project is not predictor-only. We test JEPA as an attack family:
 - `JEPA-Predictor`: break context-to-target prediction.
 - `JEPA-Hybrid`: combine encoder, predictor, SSL, or supervised losses.
 
-The practical goal is SOTA transferability. Ablations decide whether the useful signal comes from the encoder, the predictor, or their combination.
+The practical goal is honest transferability gains from JEPA-guided continuation of strong generator checkpoints. Ablations decide whether the useful signal comes from the encoder, the predictor, or their combination.
 
 ## Fair Comparison
 
@@ -25,11 +25,11 @@ JEPA should be compared against DINO/MAE and supervised baselines under the same
 
 - Naive I-JEPA encoder disruption beat naive DINOv2 feature disruption in early diagnostics.
 - Predictor-style JEPA objectives were weak in first vanilla setups.
-- The current best signal is I-JEPA encoder disruption added to an official dSVA continuation.
+- The current best signal is I-JEPA encoder disruption added to released dSVA continuation, judged against the untouched released checkpoint.
 
-Headline result: Phase 11 matched full-val repeated-seed dSVA continuation improved from **67.53%** to **68.62%** mean transfer at `jepa_weight=0.1`, a **+1.09 point** gain. The `jepa_weight=0.2` run tied the mean gain while reducing the ViT penalty. Gains are strongest on CNN victims: roughly **+1.78 points** on ResNet-50 and **+2.07 points** on ConvNeXt-Tiny at `jepa_weight=0.1`, with ViT-B/16 down **0.57 points**.
+Headline result: full ImageNet-val validation improved the untouched released dSVA checkpoint from **68.92%** to **69.98%** mean transfer across five victims at `jepa_weight=0.3`, a **+1.06 point** gain. The matched DINO+MAE continuation reached **70.77%**, so the honest conclusion is that JEPA improves the released checkpoint, but does not yet beat the best continuation control.
 
-The project remains promising, but the claim is narrow: JEPA is not a standalone replacement for DINO/MAE. It appears to be a complementary predictive-representation objective for dSVA-style generator training, especially for cross-family CNN transfer.
+The project remains promising, but the claim is narrow: JEPA is not a standalone replacement for DINO/MAE. It appears to be a complementary predictive-representation objective or stabilizing continuation objective for released dSVA-style generators.
 
 See [RESULTS.md](RESULTS.md) and [ROADMAP.md](ROADMAP.md).
 
@@ -39,6 +39,18 @@ Notebook entry points:
 
 - Phase 9/10 validation and objective ablations: [notebooks/phase9_dsva_jepa_validation_colab.ipynb](notebooks/phase9_dsva_jepa_validation_colab.ipynb)
 - Phase 11/12 JEPA weight, continuation-budget, and broader-victim scaling, local GPU runner: [notebooks/phase11_jepa_scale.ipynb](notebooks/phase11_jepa_scale.ipynb)
+- Phase 13 methodology-clean baseline and JEPA-heavy ablation, local GPU runner: [notebooks/phase13_methodology_clean.ipynb](notebooks/phase13_methodology_clean.ipynb)
+- Phase 14 full-ImageNet validation of the best Phase 13 setting, local GPU runner: [notebooks/phase14_full_imagenet_validation.ipynb](notebooks/phase14_full_imagenet_validation.ipynb)
+
+The Kaggle ImageNet localization zip can be prepared with:
+
+```powershell
+python scripts/prepare_kaggle_imagenet_subset.py `
+  --zip imagenet-object-localization-challenge.zip `
+  --output-root imagenet_phase14 `
+  --train-per-class 1 `
+  --skip-existing
+```
 
 ## Run Examples
 

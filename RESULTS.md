@@ -302,6 +302,150 @@ The architectural pattern from Phase 10 still matters: `jepa_weight=0.1` is driv
 
 Recommendation: continue to Phase 12. The paper-worthy claim is narrow but alive: I-JEPA encoder disruption appears to be a complementary predictive-representation objective for dSVA-style generator training, especially for CNN victim transfer. The next test should tune `jepa_weight=0.1` and `0.2` at longer continuation budgets and add broader victims before scaling to larger ImageNet validation.
 
+## Phase 12: Tuned Continuation and Broader Victims
+
+Completed locally with `notebooks/phase11_jepa_scale.ipynb`.
+
+Important methodology note: the aggregate CSV combines the original three-victim tuned runs with the winner-only five-victim broader panel under the same config. The clean broader-panel read below separates only `phase12_seed*_broader_victims_ep2_jw0p2_*` summaries.
+
+### Full-Val Untouched Released Baseline
+
+The untouched released dSVA checkpoint was also evaluated on the full Imagenette validation protocol for the original three victims.
+
+| victim | attack success |
+| --- | ---: |
+| resnet50 | 68.93% |
+| convnext_tiny | 55.41% |
+| vit_b_16 | 77.33% |
+
+Mean transfer success: **67.22%**.
+
+This changes the interpretation of continuation experiments: our plain DINO+MAE continuation can underperform the untouched checkpoint, so matched continuation gains alone are not sufficient evidence that JEPA improves the released model.
+
+### Tuned Longer Continuation
+
+Across seeds `0,1,2`, `jepa_weight=0.2` was the best tested setting. It was also the highest weight tested.
+
+| run | control mean | JEPA mean | matched gain |
+| --- | ---: | ---: | ---: |
+| `jepa_weight=0.1`, 2 epochs | 65.64% | 67.21% | +1.57 pts |
+| `jepa_weight=0.2`, 2 epochs | 65.64% | 68.02% | **+2.38 pts** |
+| `jepa_weight=0.1`, 3 epochs | 66.56% | 67.45% | +0.89 pts |
+| `jepa_weight=0.2`, 3 epochs | 66.56% | 68.15% | **+1.59 pts** |
+
+The best tuned run is about **+0.80 to +0.93 points** above the untouched three-victim released checkpoint, but the plain continuation control is worse than untouched.
+
+### Winner-Only Broader Victim Panel
+
+The best tuned setting, `jepa_weight=0.2` for 2 epochs, was rerun with the original victims plus `efficientnet_b0` and `swin_t`.
+
+| run | mean transfer | std |
+| --- | ---: | ---: |
+| DINO+MAE control, 2 epochs | 68.05% | 1.06 |
+| DINO+MAE+I-JEPA `0.2`, 2 epochs | **70.25%** | 0.68 |
+
+Matched gain: **+2.20 +/- 0.46 points**.
+
+| victim | control | JEPA `0.2` | matched gain |
+| --- | ---: | ---: | ---: |
+| resnet50 | 70.81% | 71.60% | +0.79 pts |
+| convnext_tiny | 52.20% | 54.45% | +2.25 pts |
+| vit_b_16 | 73.88% | 77.39% | +3.51 pts |
+| efficientnet_b0 | 94.81% | 94.93% | +0.12 pts |
+| swin_t | 48.54% | 52.87% | +4.33 pts |
+
+Seed-level matched gains were all positive: `+2.72`, `+1.84`, and `+2.04` points.
+
+### Interpretation
+
+Phase 12 is promising, but it exposed a baseline problem. JEPA clearly improves over our matched DINO+MAE continuation control, and the winner remains slightly above the untouched released checkpoint on the original three overlapping victims. However, because plain continuation can damage the released checkpoint, the main claim must be judged against an untouched released baseline on the exact same victim panel.
+
+Next: evaluate untouched released dSVA on the same five broader victims, then run a JEPA-heavy weight ablation against that untouched baseline before considering full ImageNet.
+
+## Phase 13: Methodology-Clean JEPA Weight Ablation
+
+Completed locally with `notebooks/phase13_methodology_clean.ipynb`.
+
+Phase 13 fixes the Phase 12 baseline concern by using the untouched released dSVA checkpoint as the primary baseline on the exact same five-victim panel. Matched DINO+MAE continuation is retained as a diagnostic, but not as the headline baseline.
+
+Settings:
+
+| item | value |
+| --- | --- |
+| train root | `imagenette2-320/train` |
+| eval root | `imagenette2-320/val` |
+| train limit | `1000` |
+| eval limit | `5000` full Imagenette val coverage |
+| epochs | `2` |
+| LR | `5e-5` |
+| seeds | `0,1,2` |
+| victims | `resnet50`, `convnext_tiny`, `vit_b_16`, `efficientnet_b0`, `swin_t` |
+| JEPA weights | `0.2`, `0.3`, `0.5`, `1.0` |
+
+### Untouched Released dSVA Baseline
+
+| victim | attack success |
+| --- | ---: |
+| resnet50 | 68.90% |
+| convnext_tiny | 55.44% |
+| vit_b_16 | 77.36% |
+| efficientnet_b0 | 94.61% |
+| swin_t | 50.89% |
+
+Mean transfer success: **69.44%**.
+
+### JEPA Weight Ablation
+
+| run | mean transfer | gain vs untouched | gain vs DINO+MAE control |
+| --- | ---: | ---: | ---: |
+| DINO+MAE control | 68.04% | -1.41 pts | -- |
+| DINO+MAE+I-JEPA `0.2` | 70.22% | +0.78 pts | +2.19 pts |
+| DINO+MAE+I-JEPA `0.3` | **70.65%** | **+1.21 pts** | **+2.62 pts** |
+| DINO+MAE+I-JEPA `0.5` | 70.64% | +1.20 pts | +2.61 pts |
+| DINO+MAE+I-JEPA `1.0` | 69.87% | +0.43 pts | +1.84 pts |
+
+The best setting is `jepa_weight=0.3`, with `0.5` effectively tied. The gain falls at `1.0`, so the current evidence supports moderate JEPA continuation rather than "more JEPA is always better."
+
+### Best Run Per-Victim Gains vs Untouched
+
+| victim | untouched | JEPA `0.3` | gain |
+| --- | ---: | ---: | ---: |
+| resnet50 | 68.90% | 71.59% | +2.68 pts |
+| convnext_tiny | 55.44% | 54.89% | -0.55 pts |
+| vit_b_16 | 77.36% | 78.38% | +1.02 pts |
+| efficientnet_b0 | 94.61% | 95.15% | +0.54 pts |
+| swin_t | 50.89% | 53.27% | +2.38 pts |
+
+### Interpretation
+
+Phase 13 is the first methodology-clean positive result. JEPA continuation beats the untouched released dSVA checkpoint on the same five-victim panel, not just a degraded matched continuation control. The effect is still modest, and ConvNeXt-Tiny drops slightly versus untouched, but the aggregate gain clears the pre-set `+1` point threshold.
+
+Next: run a single-config larger validation, not another broad grid. Use untouched released dSVA, matched DINO+MAE continuation, and DINO+MAE+I-JEPA `jepa_weight=0.3`, 2 epochs on full ImageNet validation or the largest available ImageNet-style validation subset.
+
+## Phase 14: Full ImageNet-Val Validation
+
+Completed locally with `notebooks/phase14_full_imagenet_validation.ipynb`.
+
+Settings: Kaggle ImageNet localization data prepared into `imagenet_phase14/`, 1000 balanced train images, full 50000-image validation, victims `resnet50`, `convnext_tiny`, `vit_b_16`, `efficientnet_b0`, `swin_t`, `epsilon=16/255`.
+
+| run | mean transfer | conclusion |
+| --- | ---: | --- |
+| untouched released dSVA | 68.92% | primary baseline |
+| DINO+MAE continuation | **70.77%** | strongest run |
+| DINO+MAE+I-JEPA `0.3` | 69.98% | +1.06 pts vs untouched, -0.79 pts vs control |
+
+Per-victim JEPA `0.3` gains vs untouched:
+
+| victim | gain |
+| --- | ---: |
+| resnet50 | +0.49 pts |
+| convnext_tiny | -2.43 pts |
+| vit_b_16 | +2.73 pts |
+| efficientnet_b0 | +1.23 pts |
+| swin_t | +3.27 pts |
+
+Interpretation: full ImageNet validation supports a workshop/short-paper claim that JEPA-guided continuation improves the released dSVA checkpoint over doing nothing. It does not support claiming JEPA is better than a well-performing DINO+MAE continuation recipe, because the matched control is higher on this larger validation.
+
 ## CE ResNet-50, Strong Engine, Epsilon 16/255
 
 Same strong CE baseline as above, but with `epsilon=16/255` and `step_size=4/255`.
@@ -369,9 +513,11 @@ Mean non-surrogate transfer success: **13.21%**
 - Heavy `DINO+MAE+JEPA` from scratch hurt transfer; low-weight normalized continuation is the promising path.
 - Official dSVA + normalized I-JEPA continuation first improved repeated-seed full-val mean transfer from `67.73%` to `68.41%`.
 - Phase 11 tuning improves the repeated-seed matched gain to about `+1.09` points at `jepa_weight=0.1` and `0.2`.
-- The gain is positive for all three seeds and compared against a matched extra-training control, but it remains modest.
+- Phase 12 improves the broader-panel matched continuation gain to about `+2.20` points at `jepa_weight=0.2`, but the matched DINO+MAE continuation control is not a faithful strong baseline because it can underperform the untouched released checkpoint.
+- Phase 13 resolves that baseline concern on Imagenette: `jepa_weight=0.3` improves the untouched released dSVA five-victim mean from `69.44%` to `70.65%`.
+- Phase 14 validates the effect on full ImageNet val: `jepa_weight=0.3` improves untouched dSVA from `68.92%` to `69.98%`, but is below the DINO+MAE continuation control at `70.77%`.
 - The earlier 1000-image official dSVA continuation result (`84.69% -> 85.58%`) was directionally consistent but optimistic in absolute score.
 - Per-victim: gain comes from ResNet-50 (+1.49) and ConvNeXt-Tiny (+1.29); ViT-B/16 drops slightly (-0.72).
 - DINO+JEPA (67.91%) is close to DINO+MAE (67.73%), suggesting JEPA can partially substitute for MAE, but DINO+MAE+JEPA (68.41%) remains the best combination.
 - JEPA-only is insufficient (64.99%). Do not replace DINO with JEPA.
-- Next: test tuned `jepa_weight=0.1`/`0.2` at longer continuation budgets and broader victims.
+- Next: diagnose why DINO+MAE continuation is now strong on ImageNet while JEPA helps transformer-family victims more than ConvNeXt; then write a short, carefully scoped result.

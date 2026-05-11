@@ -13,7 +13,7 @@ dSVA is not a neutral benchmark: intermediate ViT facets, attention guidance, an
 
 ## Next Step
 
-Run Phase 12 as a paper-kill experiment. Phase 11 showed that increasing the JEPA continuation weight from `0.05` to `0.1`/`0.2` roughly doubles the matched mean gain, with strongest improvements on CNN victims. The next question is whether tuned JEPA weights survive longer continuation and broader victim coverage, or whether the gain is an Imagenette/victim-set artifact.
+Write up the result as a narrow workshop/short-paper candidate and run one diagnostic pass. Full ImageNet validation shows `jepa_weight=0.3` improves the untouched released dSVA checkpoint from `68.92%` to `69.98%`, but the matched DINO+MAE continuation control is stronger at `70.77%`. The claim should be about JEPA-guided continuation improving a released checkpoint, not beating all continuation recipes.
 
 ## Phases
 
@@ -30,28 +30,26 @@ Run Phase 12 as a paper-kill experiment. Phase 11 showed that increasing the JEP
 - ~~Phase 9: larger randomized/balanced evaluation set: full-val repeated-seed gain is positive but small, `67.73% -> 68.41%`~~
 - ~~Phase 10: per-architecture and objective ablations~~
 - ~~Phase 11: scale JEPA weight or continuation budget to test if the CNN gain can be enlarged: `jepa_weight=0.1` and `0.2` both improve matched mean transfer by about +1.09 points~~
-- Phase 12: validate tuned JEPA continuation with longer budgets and broader victims
+- ~~Phase 12: validate tuned JEPA continuation with longer budgets and broader victims: `jepa_weight=0.2`, 2 epochs gave a +2.20 point matched broader-panel gain, but exposed a continuation-baseline flaw~~
+- ~~Phase 13: methodology-clean untouched baseline and JEPA-heavy weight ablation: `jepa_weight=0.3` improved untouched dSVA by +1.21 points on five victims~~
+- ~~Phase 14: full-ImageNet validation: `jepa_weight=0.3` beats untouched dSVA by +1.06 points, but trails DINO+MAE continuation by -0.79 points~~
 
 ## Decision Rule
 
-Scale JEPA if tuned continuation (`jepa_weight=0.1` or `0.2`) survives longer validation, improves cross-family transfer on additional CNN/Transformer victims, or adds complementary per-image failures. Do not require the predictor-only objective to win by itself.
+Proceed toward a short writeup if the claim stays narrow: JEPA-guided continuation improves a released dSVA checkpoint over the untouched baseline on full ImageNet val. Do not claim SOTA, do not claim JEPA beats DINO+MAE continuation, and keep the matched control as an important caveat.
 
-## Phase 12 Protocol
+## Immediate Experiments
 
-Use the local Phase 11 notebook as the runner and extend the matrix rather than repeating completed baselines:
+Run only diagnostics that clarify the story:
 
-| experiment | configs | epochs | decision target |
-| --- | --- | ---: | --- |
-| tuned longer continuation | `0.1:0.00005`, `0.2:0.00005` | 2 | test whether Phase 11 gains scale |
-| tuned longer continuation | `0.1:0.00005`, `0.2:0.00005` | 3 | test over-continuation risk |
-| broader victims | best tuned config | 1-2 | test whether CNN gains generalize |
-
-Continue toward a paper if the tuned JEPA run preserves at least a +1 point matched mean gain, keeps CNN gains around +2 points or better, avoids a mean-erasing Transformer penalty, and shows complementary per-image failures. Downscope if the gain vanishes under longer controls, broader victims, or per-image analysis.
+- Per-victim and per-image overlap between untouched, DINO+MAE continuation, and JEPA continuation.
+- A hybrid/control sanity check: DINO+MAE continuation plus lower JEPA weights around `0.2` to `0.5` only if compute is cheap.
+- A reproduction check of DINO+MAE continuation settings, because the control is strong on ImageNet but was unstable on Imagenette.
 
 ## Day-One Read
 
-Promising: I-JEPA encoder features beat naive DINO features in early diagnostics, normalized low-weight JEPA continuation slightly improved the released dSVA checkpoint, and Phase 11 tuning grew the matched full-val repeated-seed gain to about +1.09 points at `jepa_weight=0.1`/`0.2`.
+Promising: I-JEPA encoder features beat naive DINO features in early diagnostics, Phase 13 showed a methodology-clean +1.21 point gain over untouched released dSVA on Imagenette, and Phase 14 preserved a +1.06 point gain over untouched dSVA on full ImageNet val.
 
-Not proven: JEPA replacing DINO, JEPA-only sufficiency, predictor-based attacks, and full dSVA reproduction fidelity.
+Not proven: JEPA replacing DINO, JEPA-only sufficiency, predictor-based attacks, full dSVA reproduction fidelity, and JEPA beating DINO+MAE continuation.
 
-Not promising so far: heavy `DINO+MAE+JEPA` from-scratch weighting, JEPA-only generator training, and predictor-only objectives.
+Not promising so far: heavy `DINO+MAE+JEPA` from-scratch weighting, JEPA-only generator training, predictor-only objectives, and overstating matched-control gains when the untouched baseline is the fair comparison.

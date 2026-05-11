@@ -1,5 +1,10 @@
 # Local datasets and model weights
 imagenette2-320/
+imagenet/
+ILSVRC2012/
+imagenet_phase14/
+imagenet-object-localization-challenge/
+imagenet-object-localization-challenge.zip
 .torch_cache/
 .hf_cache/
 ijepa/
